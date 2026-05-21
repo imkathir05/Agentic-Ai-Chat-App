@@ -1,0 +1,111 @@
+/* Light theme (default) */
+:root,
+[data-theme="light"] {
+  --bg: #f3f4f6;
+  --sidebar: #ffffff;
+  --surface: #ffffff;
+  --surface-hover: #f3f4f6;
+  --border: #e5e7eb;
+  --text: #111827;
+  --text-secondary: #6b7280;
+  --accent: #2563eb;
+  --accent-dim: #1d4ed8;
+  --accent-glow: rgba(37, 99, 235, 0.25);
+  --error: #dc2626;
+  --composer-bg: #ffffff;
+  --composer-border: #d1d5db;
+  --user-bg: #eff6ff;
+  --assistant-bg: #f9fafb;
+  --shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 4px 12px rgba(0, 0, 0, 0.06);
+  --radius: 12px;
+  --radius-pill: 26px;
+  --sidebar-width: 240px;
+  --font: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --mono: "JetBrains Mono", "Consolas", monospace;
+  --dashboard-bg: #f3f4f6;
+  --card-bg: #ffffff;
+  --popover-bg: #ffffff;
+  --filter-pill-active-bg: #111827;
+  --filter-pill-active-text: #ffffff;
+}
+
+/* Dark theme */
+[data-theme="dark"] {
+  --bg: #0a0a0a;
+  --sidebar: #111111;
+  --surface: #1a1a1a;
+  --surface-hover: #252525;
+  --border: #2e2e2e;
+  --text: #f3f4f6;
+  --text-secondary: #9ca3af;
+  --accent: #3ddc84;
+  --accent-dim: #2bc96a;
+  --accent-glow: rgba(61, 220, 132, 0.35);
+  --error: #f87171;
+  --composer-bg: #1a1a1a;
+  --composer-border: #333333;
+  --user-bg: #1e3a2f;
+  --assistant-bg: #141414;
+  --shadow: 0 4px 24px rgba(0, 0, 0, 0.5);
+  --dashboard-bg: #0a0a0a;
+  --card-bg: #1a1a1a;
+  --popover-bg: #1a1a1a;
+  --filter-pill-active-bg: #3ddc84;
+  --filter-pill-active-text: #000000;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  transition: background 0.15s, border-color 0.15s, opacity 0.15s;
+  color: inherit;
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+input,
+textarea,
+select {
+  font-family: inherit;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 8px;
+  padding: 0.5rem 0.75rem;
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 0;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--text-secondary);
+}
