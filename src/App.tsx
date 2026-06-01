@@ -329,7 +329,7 @@ export default function App() {
       const sessionRow = list.find((s) => s.id === sessionId);
       const resolvedTitle =
         opts?.title ??
-        (currentMessages.length === 0 || sessionRow?.title === "New chat"
+        (currentMessages.length === 0 || sessionRow?.title.startsWith("New chat")
           ? titleFromMessage(text)
           : undefined);
 
@@ -553,7 +553,7 @@ export default function App() {
   }
 
   return (
-    <div className="app-shell">
+    <div className={`app-shell ${!sidebarOpen ? "sidebar-closed" : ""}`}>
       {sidebarOpen && (
         <Sidebar
           user={user}

@@ -18,7 +18,7 @@ export default function EditToolModal({ open, tool, onClose, onSaved }: Props) {
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="modal modal-wide" onClick={(e) => e.stopPropagation()}>
+      <div className="modal modal-full" onClick={(e) => e.stopPropagation()}>
         <header className="modal-header">
           <h2>Edit tool</h2>
           <button type="button" className="modal-close" onClick={onClose}>

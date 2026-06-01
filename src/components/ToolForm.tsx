@@ -60,6 +60,47 @@ export default function ToolForm({ tool, onSuccess, onCancel }: Props) {
     setError("");
   }, [tool]);
 
+  const [tab, setTab] = useState<"general" | "api">("general");
+
+  const handleGenerateSchema = () => {
+    if (!apiBody.trim()) {
+      setError("Please enter a POST body template first.");
+      return;
+    }
+    try {
+      const parsed = JSON.parse(apiBody);
+      if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
+        setError("Body must be a JSON object to generate schema.");
+        return;
+      }
+      
+      const properties: Record<string, any> = {};
+      const required: string[] = [];
+      
+      for (const [key, value] of Object.entries(parsed)) {
+        required.push(key);
+        let type = "string";
+        if (typeof value === "number") type = "number";
+        else if (typeof value === "boolean") type = "boolean";
+        else if (Array.isArray(value)) type = "array";
+        else if (typeof value === "object" && value !== null) type = "object";
+        
+        properties[key] = { type };
+      }
+      
+      const schema = {
+        type: "object",
+        properties,
+        required
+      };
+      
+      setParametersJson(JSON.stringify(schema, null, 2));
+      setError("");
+    } catch (e) {
+      setError("POST body must be valid JSON to generate schema.");
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
@@ -135,87 +176,126 @@ export default function ToolForm({ tool, onSuccess, onCancel }: Props) {
         </p>
       )}
 
-      <label>
-        Tool name
-        <input
-          placeholder="snake_case e.g. get_weather"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          required
-          readOnly={readOnly || isEdit}
-          disabled={readOnly || isEdit}
-        />
-      </label>
-      <label>
-        Description (for the LLM)
-        <textarea
-          placeholder="When should the AI call this tool?"
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          rows={2}
-          required
-        />
-      </label>
+      {!readOnly && handlerType === "http_api" && (
+        <div className="setup-tabs">
+          <button
+            type="button"
+            className={`setup-tab ${tab === "general" ? "active" : ""}`}
+            onClick={() => setTab("general")}
+          >
+            General
+          </button>
+          <button
+            type="button"
+            className={`setup-tab ${tab === "api" ? "active" : ""}`}
+            onClick={() => setTab("api")}
+          >
+            API Details
+          </button>
+        </div>
+      )}
 
-      {!readOnly && (
-        <>
+      {(!readOnly && handlerType === "http_api" ? tab === "general" : true) && (
+        <div className="setup-tab-panel">
           <label>
-            Handler type
-            <select
-              value={handlerType}
-              onChange={(e) => setHandlerType(e.target.value)}
-              disabled={isEdit}
-            >
-              <option value="http_api">External HTTP API</option>
-              <option value="echo_args">Echo (test)</option>
-              <option value="uppercase">Uppercase</option>
-            </select>
+            Tool name
+            <input
+              placeholder="snake_case e.g. get_weather"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              required
+              readOnly={readOnly || isEdit}
+              disabled={readOnly || isEdit}
+            />
+          </label>
+          <label>
+            Description (for the LLM)
+            <textarea
+              placeholder="When should the AI call this tool?"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              rows={2}
+              required
+            />
           </label>
 
-          {handlerType === "http_api" && (
-            <>
-              <label>
-                API URL
-                <input
-                  placeholder="https://api.example.com/items/{id}"
-                  value={apiUrl}
-                  onChange={(e) => setApiUrl(e.target.value)}
-                  required
-                />
-              </label>
-              <label>
-                Method
-                <select
-                  value={apiMethod}
-                  onChange={(e) => setApiMethod(e.target.value)}
-                >
-                  <option value="GET">GET</option>
-                  <option value="POST">POST</option>
-                  <option value="PUT">PUT</option>
-                  <option value="DELETE">DELETE</option>
-                </select>
-              </label>
-              <label>
-                Parameters (JSON Schema)
-                <textarea
-                  value={parametersJson}
-                  onChange={(e) => setParametersJson(e.target.value)}
-                  rows={5}
-                  required
-                />
-              </label>
-              <label>
-                POST body template (optional)
-                <textarea
-                  placeholder='{"id": "{id}"}'
-                  value={apiBody}
-                  onChange={(e) => setApiBody(e.target.value)}
-                  rows={2}
-                />
-              </label>
-            </>
+          {!readOnly && (
+            <label>
+              Handler type
+              <select
+                value={handlerType}
+                onChange={(e) => {
+                  setHandlerType(e.target.value);
+                  if (e.target.value !== "http_api") {
+                    setTab("general");
+                  }
+                }}
+                disabled={isEdit}
+              >
+                <option value="http_api">External HTTP API</option>
+                <option value="echo_args">Echo (test)</option>
+                <option value="uppercase">Uppercase</option>
+              </select>
+            </label>
           )}
-        </>
+        </div>
+      )}
+
+      {!readOnly && handlerType === "http_api" && tab === "api" && (
+        <div className="setup-tab-panel">
+          <label>
+            API URL
+            <input
+              placeholder="https://api.example.com/items/{id}"
+              value={apiUrl}
+              onChange={(e) => setApiUrl(e.target.value)}
+              required
+            />
+          </label>
+          <label>
+            Method
+            <select
+              value={apiMethod}
+              onChange={(e) => setApiMethod(e.target.value)}
+            >
+              <option value="GET">GET</option>
+              <option value="POST">POST</option>
+              <option value="PUT">PUT</option>
+              <option value="DELETE">DELETE</option>
+            </select>
+          </label>
+          <label>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%" }}>
+              <span>POST body template (optional)</span>
+              <button
+                type="button"
+                className="btn-secondary"
+                style={{ fontSize: "0.75rem", padding: "0.25rem 0.6rem" }}
+                onClick={(e) => {
+                  e.preventDefault();
+                  handleGenerateSchema();
+                }}
+              >
+                Generate schema
+              </button>
+            </div>
+            <textarea
+              placeholder='{"id": "{id}"}'
+              value={apiBody}
+              onChange={(e) => setApiBody(e.target.value)}
+              rows={4}
+            />
+          </label>
+          <label>
+            Parameters (JSON Schema)
+            <textarea
+              value={parametersJson}
+              onChange={(e) => setParametersJson(e.target.value)}
+              rows={8}
+              required
+            />
+          </label>
+        </div>
       )}
 
       <div className="create-tool-actions">

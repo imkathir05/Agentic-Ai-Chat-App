@@ -72,8 +72,7 @@ export function workspaceTitleForAgent(
 
 /** Title for a general chat workspace (no agent). */
 export function workspaceTitleGeneral(sessions: ChatSession[]): string {
-  const count = sessions.filter((s) => !s.agentId).length;
-  return count > 0 ? `New chat (${count + 1})` : DEFAULT_TITLE;
+  return DEFAULT_TITLE;
 }
 
 /** Build a short sidebar label from the user's first message. */
@@ -106,9 +105,8 @@ export function sessionDisplayTitle(session: ChatSession): string {
   return DEFAULT_TITLE;
 }
 
-/** Fix sessions saved before auto-naming (messages exist but title is still "New chat"). */
 export function normalizeSession(session: ChatSession): ChatSession {
-  if (session.title !== DEFAULT_TITLE || session.messages.length === 0) {
+  if (!session.title.startsWith(DEFAULT_TITLE) || session.messages.length === 0) {
     return session;
   }
   const first = firstUserMessage(session);
