@@ -125,7 +125,7 @@ export default function App() {
   const [agentSetupTab, setAgentSetupTab] = useState<
     "details" | "instructions" | "tools"
   >("details");
-  const [appView, setAppView] = useState<AppView>("agents");
+  const [appView, setAppView] = useState<AppView>("chat");
   const [startingAgentId, setStartingAgentId] = useState<string | null>(null);
   const [deleteWorkspace, setDeleteWorkspace] = useState<{
     id: string;
@@ -460,7 +460,7 @@ export default function App() {
         saveActiveAgentId(null);
         setActiveId(null);
         saveActiveId(null);
-        setAppView("agents");
+        setAppView("chat");
       }
       await refreshAgents();
     } catch (e) {
@@ -507,7 +507,7 @@ export default function App() {
     } else {
       setActiveId(null);
       saveActiveId(null);
-      setAppView("agents");
+      setAppView("chat");
       setChatError("");
     }
   }, [
