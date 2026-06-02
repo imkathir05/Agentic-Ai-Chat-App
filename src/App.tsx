@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   authMe,
   deleteAgent,
@@ -101,6 +101,76 @@ function loadSettings(provider: LlmProvider) {
     /* ignore */
   }
   return { model: defaultModel(provider) };
+}
+
+function ModelSelector({
+  model,
+  provider,
+  onChange,
+}: {
+  model: string;
+  provider: LlmProvider;
+  onChange: (m: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClick = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    };
+    if (open) document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [open]);
+
+  const options = provider === "gemini" ? GEMINI_MODEL_OPTIONS : GROQ_MODEL_OPTIONS;
+
+  return (
+    <div className="model-select-wrap" ref={ref}>
+      <button
+        type="button"
+        className={`model-select-btn ${open ? "open" : ""}`}
+        onClick={() => setOpen(!open)}
+      >
+        <span className="model-select-text">{model}</span>
+        <svg
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2.5"
+          className={`model-select-arrow ${open ? "open" : ""}`}
+        >
+          <path d="M6 9l6 6 6-6" />
+        </svg>
+      </button>
+      {open && (
+        <div className="model-select-dropdown">
+          {options.map((m) => (
+            <button
+              key={m}
+              type="button"
+              className={`model-select-item ${model === m ? "active" : ""}`}
+              onClick={() => {
+                onChange(m);
+                setOpen(false);
+              }}
+            >
+              <span className="model-item-text">{m}</span>
+              {model === m && (
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="model-check">
+                  <path d="M20 6L9 17l-5-5" />
+                </svg>
+              )}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 }
 
 export default function App() {
@@ -568,35 +638,31 @@ export default function App() {
           onLogout={handleLogout}
           theme={theme}
           onThemeChange={handleThemeChange}
+          onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
         />
       )}
 
       <main className={`main ${appView !== "chat" ? "main-dashboard" : ""}`}>
         {appView === "chat" && (
           <header className="main-header">
-            <button
-              type="button"
-              className="icon-btn"
-              onClick={() => setSidebarOpen(!sidebarOpen)}
-              title="Toggle sidebar"
-            >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M3 12h18M3 6h18M3 18h18" />
-              </svg>
-            </button>
-            <div className="model-select-wrap">
-              <select
-                value={model}
-                onChange={(e) => setModel(normalizeModel(e.target.value, provider))}
-                className="model-select"
+            {!sidebarOpen && (
+              <button
+                type="button"
+                className="icon-btn"
+                onClick={() => setSidebarOpen(!sidebarOpen)}
+                title="Toggle sidebar"
               >
-                {(provider === "gemini" ? GEMINI_MODEL_OPTIONS : GROQ_MODEL_OPTIONS).map((m) => (
-                  <option key={m} value={m}>
-                    {m}
-                  </option>
-                ))}
-              </select>
-            </div>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                  <line x1="9" y1="3" x2="9" y2="21" />
+                </svg>
+              </button>
+            )}
+            <ModelSelector 
+              model={model} 
+              provider={provider} 
+              onChange={(newModel) => setModel(normalizeModel(newModel, provider))} 
+            />
             {sessionAgent && (
               <span className="active-agent-badge" title={`${sessionAgent.tools_count} tools`}>
                 {sessionAgent.name}

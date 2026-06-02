@@ -18,6 +18,7 @@ interface Props {
   onLogout: () => void;
   theme: Theme;
   onThemeChange: (theme: Theme) => void;
+  onToggleSidebar?: () => void;
 }
 
 export default function Sidebar({
@@ -33,6 +34,7 @@ export default function Sidebar({
   onLogout,
   theme,
   onThemeChange,
+  onToggleSidebar,
 }: Props) {
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
@@ -54,20 +56,53 @@ export default function Sidebar({
 
   return (
     <aside className="sidebar june-sidebar">
-      <div className="sidebar-brand">
-        <span className="sidebar-brand-logo">◇</span>
-        <span className="sidebar-brand-text">Agentic AI</span>
-      </div>
-
-      <nav className="sidebar-nav">
+      <div className="sidebar-brand" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.5rem 0.5rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', paddingLeft: '0.25rem' }}>
+          <span className="sidebar-brand-logo" style={{ fontSize: '1.25rem' }}>◇</span>
+        </div>
         <button
           type="button"
-          className={`sidebar-nav-item ${appView === "chat" ? "active" : ""}`}
-          onClick={onNewChat}
+          className="icon-btn"
+          onClick={onToggleSidebar}
+          title="Close sidebar"
+          style={{ padding: '0.4rem', color: 'var(--text-secondary)' }}
         >
-          <IconPlus />
-          New Chat
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+            <line x1="9" y1="3" x2="9" y2="21" />
+          </svg>
         </button>
+      </div>
+
+      <div style={{ padding: '0 0.5rem 0.5rem' }}>
+        <button
+          type="button"
+          onClick={onNewChat}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+            width: '100%',
+            padding: '0.55rem 0.75rem',
+            background: 'var(--surface-hover)',
+            border: 'none',
+            borderRadius: '8px',
+            color: 'var(--text)',
+            cursor: 'pointer',
+            fontSize: '0.9rem',
+            fontWeight: 500,
+            textAlign: 'left',
+          }}
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+          </svg>
+          New chat
+        </button>
+      </div>
+
+      <nav className="sidebar-nav" style={{ marginTop: '0.5rem' }}>
         <button
           type="button"
           className={`sidebar-nav-item ${appView === "agents" ? "active" : ""}`}
