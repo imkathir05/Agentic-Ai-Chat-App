@@ -119,8 +119,8 @@ export default function Composer({
             {loading ? (
               <span className="send-spinner" />
             ) : (
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M3 12h2l2-7 4 14 2-7h8v-2H3z" />
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 20V4m-7 7l7-7 7 7" />
               </svg>
             )}
           </button>
