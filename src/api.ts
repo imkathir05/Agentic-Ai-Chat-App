@@ -54,6 +54,7 @@ export interface HealthResponse {
   model: string;
   has_api_key: boolean;
   framework?: string;
+  google_client_id?: string;
 }
 
 const API_BASE = "/api";
@@ -129,6 +130,16 @@ export async function register(
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ username, email, password }),
+  });
+  return handleResponse(res);
+}
+
+export async function googleLogin(token: string): Promise<{ user: User }> {
+  const res = await apiFetch(`${API_BASE}/auth/google`, {
+    ...fetchOpts,
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ token }),
   });
   return handleResponse(res);
 }

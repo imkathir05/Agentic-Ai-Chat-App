@@ -119,3 +119,65 @@ def me(request):
             'email': request.user.email
         }
     })
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def google_auth(request):
+    from google.oauth2 import id_token
+    from google.auth.transport import requests as google_requests
+
+    token = request.data.get('token')
+    if not token:
+        return Response({'detail': 'Token is required'}, status=status.HTTP_400_BAD_REQUEST)
+        
+    client_id = getattr(settings, 'GOOGLE_OAUTH_CLIENT_ID', '')
+    if not client_id:
+        return Response({'detail': 'Google OAuth Client ID is not configured on the backend'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+    try:
+        # Verify the Google ID token
+        idinfo = id_token.verify_oauth2_token(token, google_requests.Request(), client_id)
+        
+        # Verify issuer
+        if idinfo['iss'] not in ['accounts.google.com', 'https://accounts.google.com']:
+            raise ValueError('Wrong issuer.')
+            
+        email = idinfo.get('email')
+        if not email:
+            return Response({'detail': 'Email not provided by Google'}, status=status.HTTP_400_BAD_REQUEST)
+            
+        # Try to find user by email
+        user = User.objects.filter(email=email).first()
+        
+        # If user does not exist, create a new user
+        if not user:
+            name = idinfo.get('name', '')
+            base_username = email.split('@')[0]
+            username = base_username
+            if User.objects.filter(username=username).exists():
+                username = f"{base_username}_{idinfo.get('sub')[:8]}"
+            
+            user = User.objects.create_user(
+                username=username,
+                email=email,
+                display_name=name
+            )
+            # Disable password login for this user since they use OAuth
+            user.set_unusable_password()
+            user.save()
+            
+        access, refresh = generate_tokens(user)
+        res = Response({
+            'user': {
+                'id': user.id,
+                'username': user.username,
+                'email': user.email
+            }
+        })
+        set_auth_cookies(res, access, refresh)
+        return res
+        
+    except ValueError as e:
+        return Response({'detail': f'Invalid token: {str(e)}'}, status=status.HTTP_400_BAD_REQUEST)
+    except Exception as e:
+        return Response({'detail': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

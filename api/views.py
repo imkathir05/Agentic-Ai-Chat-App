@@ -29,6 +29,7 @@ def health(_request: Request) -> Response:
             "framework": "django",
             "model": model,
             "has_api_key": has_key,
+            "google_client_id": getattr(django_settings, "GOOGLE_OAUTH_CLIENT_ID", ""),
         }
     )
 

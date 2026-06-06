@@ -216,6 +216,7 @@ export default function App() {
   const [loginOpen, setLoginOpen] = useState(false);
   const [authMode, setAuthMode] = useState<"login" | "register">("login");
   const [theme, setTheme] = useState<Theme>(() => loadTheme());
+  const [googleClientId, setGoogleClientId] = useState("");
 
   const handleThemeChange = useCallback((next: Theme) => {
     setTheme(next);
@@ -328,7 +329,6 @@ export default function App() {
     : tools.filter((t) => t.enabled);
 
   useEffect(() => {
-    if (!user) return;
     healthCheck()
       .then((h) => {
         setBackendOk(true);
@@ -336,14 +336,19 @@ export default function App() {
         const p = (h.provider === "gemini" ? "gemini" : "groq") as LlmProvider;
         setProvider(p);
         if (h.model) setModel(normalizeModel(h.model, p));
-        refreshTools();
-        refreshAgents();
+        if (h.google_client_id) setGoogleClientId(h.google_client_id);
       })
       .catch(() => {
         setBackendOk(false);
         setServerHasApiKey(false);
       });
-  }, [refreshTools, refreshAgents, user]);
+  }, []);
+
+  useEffect(() => {
+    if (!user) return;
+    refreshTools();
+    refreshAgents();
+  }, [user, refreshTools, refreshAgents]);
 
   useEffect(() => {
     if (activeId != null || sessions.length === 0) return;
@@ -617,6 +622,7 @@ export default function App() {
           initialMode={authMode}
           onClose={() => setLoginOpen(false)}
           onSuccess={checkAuth}
+          googleClientId={googleClientId}
         />
       </>
     );
