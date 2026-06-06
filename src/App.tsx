@@ -43,7 +43,6 @@ import AgentSetupModal from "./components/AgentSetupModal";
 import ConfirmModal from "./components/ConfirmModal";
 import ToolsPage from "./components/ToolsPage";
 import { applyTheme, loadTheme, type Theme } from "./theme";
-import "./App.css";
 
 const STORAGE_KEY = "agentic-ai-settings";
 const DEFAULT_GROQ_MODEL = "llama-3.3-70b-versatile";
@@ -128,13 +127,13 @@ function ModelSelector({
   const options = provider === "gemini" ? GEMINI_MODEL_OPTIONS : GROQ_MODEL_OPTIONS;
 
   return (
-    <div className="model-select-wrap" ref={ref}>
+    <div className="relative" ref={ref}>
       <button
         type="button"
-        className={`model-select-btn ${open ? "open" : ""}`}
+        className={`flex items-center gap-2 bg-transparent border-none text-lg font-semibold px-2 py-1.5 cursor-pointer text-text rounded-lg hover:bg-surface-hover transition-colors ${open ? "bg-surface-hover" : ""}`}
         onClick={() => setOpen(!open)}
       >
-        <span className="model-select-text">{model}</span>
+        <span>{model}</span>
         <svg
           width="16"
           height="16"
@@ -142,26 +141,26 @@ function ModelSelector({
           fill="none"
           stroke="currentColor"
           strokeWidth="2.5"
-          className={`model-select-arrow ${open ? "open" : ""}`}
+          className={`text-text-secondary transition-transform duration-200 ${open ? "rotate-180" : ""}`}
         >
           <path d="M6 9l6 6 6-6" />
         </svg>
       </button>
       {open && (
-        <div className="model-select-dropdown">
+        <div className="absolute top-[calc(100%+4px)] left-0 min-w-[260px] bg-surface border border-border rounded-xl shadow-lg p-2 z-50 flex flex-col">
           {options.map((m) => (
             <button
               key={m}
               type="button"
-              className={`model-select-item ${model === m ? "active" : ""}`}
+              className={`flex items-center justify-between w-full px-3.5 py-2.5 border-none bg-transparent text-text text-[15px] font-medium text-left rounded-lg cursor-pointer hover:bg-surface-hover transition-colors ${model === m ? "text-accent" : ""}`}
               onClick={() => {
                 onChange(m);
                 setOpen(false);
               }}
             >
-              <span className="model-item-text">{m}</span>
+              <span>{m}</span>
               {model === m && (
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="model-check">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="text-accent shrink-0">
                   <path d="M20 6L9 17l-5-5" />
                 </svg>
               )}
@@ -604,8 +603,8 @@ export default function App() {
 
   if (authLoading) {
     return (
-      <div className="landing loading-screen">
-        <p className="auth-loading">Loading…</p>
+      <div className="min-h-screen flex items-center justify-center bg-bg">
+        <p className="text-lg text-text-secondary animate-pulse">Loading…</p>
       </div>
     );
   }
@@ -614,6 +613,8 @@ export default function App() {
     return (
       <>
         <LandingPage
+          theme={theme}
+          onThemeChange={handleThemeChange}
           onLogin={() => openLogin("login")}
           onSignUp={() => openLogin("register")}
         />
@@ -623,13 +624,14 @@ export default function App() {
           onClose={() => setLoginOpen(false)}
           onSuccess={checkAuth}
           googleClientId={googleClientId}
+          theme={theme}
         />
       </>
     );
   }
 
   return (
-    <div className={`app-shell ${!sidebarOpen ? "sidebar-closed" : ""}`}>
+    <div className="flex h-screen overflow-hidden bg-bg">
       {sidebarOpen && (
         <Sidebar
           user={user}
@@ -648,13 +650,13 @@ export default function App() {
         />
       )}
 
-      <main className={`main ${appView !== "chat" ? "main-dashboard" : ""}`}>
+      <main className={`flex-1 flex flex-col min-w-0 h-screen ${appView !== "chat" ? "bg-dashboard-bg" : ""}`}>
         {appView === "chat" && (
-          <header className="main-header">
+          <header className="flex items-center gap-2 px-4 min-h-[52px] border-b border-border bg-sidebar/50 backdrop-blur-sm">
             {!sidebarOpen && (
               <button
                 type="button"
-                className="icon-btn"
+                className="p-1.5 rounded-lg text-text-secondary hover:bg-surface-hover transition-colors"
                 onClick={() => setSidebarOpen(!sidebarOpen)}
                 title="Toggle sidebar"
               >
@@ -670,19 +672,19 @@ export default function App() {
               onChange={(newModel) => setModel(normalizeModel(newModel, provider))} 
             />
             {sessionAgent && (
-              <span className="active-agent-badge" title={`${sessionAgent.tools_count} tools`}>
+              <span className="text-xs px-2.5 py-1 rounded-full bg-surface-hover border border-border text-accent font-medium max-w-[180px] overflow-hidden text-ellipsis whitespace-nowrap" title={`${sessionAgent.tools_count} tools`}>
                 {sessionAgent.name}
               </span>
             )}
-            <div className="header-spacer" />
-            <span className={`conn-dot ${backendOk ? "on" : "off"}`} title="Backend" />
+            <div className="flex-1" />
+            <span className={`w-2 h-2 rounded-full ${backendOk ? "bg-accent" : "bg-error"}`} title="Backend" />
           </header>
         )}
 
         {chatError && (
-          <div className="toast-error" role="alert">
+          <div className="flex items-center justify-between gap-4 mx-4 my-2.5 py-2.5 px-4 bg-red-500/15 border border-red-500/35 text-error rounded-lg text-sm" role="alert">
             {chatError}
-            <button type="button" onClick={() => setChatError("")}>×</button>
+            <button type="button" className="text-lg text-error hover:opacity-80" onClick={() => setChatError("")}>×</button>
           </div>
         )}
 
@@ -719,7 +721,7 @@ export default function App() {
         )}
 
         {appView === "chat" && (
-          <div className={`chat-area ${isEmpty ? "empty" : "active"}`}>
+          <div className={`flex-1 flex flex-col min-h-0 relative ${isEmpty ? "justify-center items-center" : "justify-end"}`}>
             {!isEmpty && (
               <ChatMessages messages={messages} loading={loading} />
             )}

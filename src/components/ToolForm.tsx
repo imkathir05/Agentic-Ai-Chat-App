@@ -166,28 +166,40 @@ export default function ToolForm({ tool, onSuccess, onCancel }: Props) {
   };
 
   return (
-    <form className="add-tool-form create-tool-form" onSubmit={handleSubmit}>
-      {error && <p className="error-banner">{error}</p>}
+    <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
+      {error && (
+        <p className="text-red-500 text-sm bg-red-50 dark:bg-red-950/20 p-3 rounded-lg border border-red-200 dark:border-red-900/50 mb-2 font-medium">
+          {error}
+        </p>
+      )}
 
       {readOnly && (
-        <p className="create-tool-intro">
+        <p className="text-sm text-text-secondary leading-relaxed mb-4">
           Built-in tools can only have their description updated (used by the LLM when
           choosing tools).
         </p>
       )}
 
       {!readOnly && handlerType === "http_api" && (
-        <div className="setup-tabs">
+        <div className="flex gap-1 border-b border-border pb-0.5 mb-2">
           <button
             type="button"
-            className={`setup-tab ${tab === "general" ? "active" : ""}`}
+            className={`px-4 py-2 text-sm border-b-2 transition-all cursor-pointer ${
+              tab === "general" 
+                ? "text-accent border-accent font-semibold" 
+                : "text-text-secondary border-transparent hover:text-text"
+            }`}
             onClick={() => setTab("general")}
           >
             General
           </button>
           <button
             type="button"
-            className={`setup-tab ${tab === "api" ? "active" : ""}`}
+            className={`px-4 py-2 text-sm border-b-2 transition-all cursor-pointer ${
+              tab === "api" 
+                ? "text-accent border-accent font-semibold" 
+                : "text-text-secondary border-transparent hover:text-text"
+            }`}
             onClick={() => setTab("api")}
           >
             API Details
@@ -196,11 +208,12 @@ export default function ToolForm({ tool, onSuccess, onCancel }: Props) {
       )}
 
       {(!readOnly && handlerType === "http_api" ? tab === "general" : true) && (
-        <div className="setup-tab-panel">
-          <label>
+        <div className="flex flex-col gap-4">
+          <label className="flex flex-col gap-1.5 text-xs font-bold text-text-secondary uppercase tracking-wider">
             Tool name
             <input
               placeholder="snake_case e.g. get_weather"
+              className="w-full px-3.5 py-2.5 bg-surface border border-border rounded-xl text-sm font-normal text-text outline-none focus:border-accent focus:ring-1 focus:ring-accent/20 transition-all placeholder-text-secondary mt-1 disabled:opacity-55 disabled:cursor-not-allowed"
               value={name}
               onChange={(e) => setName(e.target.value)}
               required
@@ -208,10 +221,11 @@ export default function ToolForm({ tool, onSuccess, onCancel }: Props) {
               disabled={readOnly || isEdit}
             />
           </label>
-          <label>
+          <label className="flex flex-col gap-1.5 text-xs font-bold text-text-secondary uppercase tracking-wider">
             Description (for the LLM)
             <textarea
               placeholder="When should the AI call this tool?"
+              className="w-full px-3.5 py-2.5 bg-surface border border-border rounded-xl text-sm font-normal text-text outline-none focus:border-accent focus:ring-1 focus:ring-accent/20 transition-all placeholder-text-secondary mt-1"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={2}
@@ -220,10 +234,11 @@ export default function ToolForm({ tool, onSuccess, onCancel }: Props) {
           </label>
 
           {!readOnly && (
-            <label>
+            <label className="flex flex-col gap-1.5 text-xs font-bold text-text-secondary uppercase tracking-wider">
               Handler type
               <select
                 value={handlerType}
+                className="w-full px-3.5 py-2.5 bg-surface border border-border rounded-xl text-sm font-normal text-text outline-none focus:border-accent focus:ring-1 focus:ring-accent/20 transition-all mt-1 disabled:opacity-55"
                 onChange={(e) => {
                   setHandlerType(e.target.value);
                   if (e.target.value !== "http_api") {
@@ -242,20 +257,22 @@ export default function ToolForm({ tool, onSuccess, onCancel }: Props) {
       )}
 
       {!readOnly && handlerType === "http_api" && tab === "api" && (
-        <div className="setup-tab-panel">
-          <label>
+        <div className="flex flex-col gap-4">
+          <label className="flex flex-col gap-1.5 text-xs font-bold text-text-secondary uppercase tracking-wider">
             API URL
             <input
               placeholder="https://api.example.com/items/{id}"
+              className="w-full px-3.5 py-2.5 bg-surface border border-border rounded-xl text-sm font-normal text-text outline-none focus:border-accent focus:ring-1 focus:ring-accent/20 transition-all placeholder-text-secondary mt-1"
               value={apiUrl}
               onChange={(e) => setApiUrl(e.target.value)}
               required
             />
           </label>
-          <label>
+          <label className="flex flex-col gap-1.5 text-xs font-bold text-text-secondary uppercase tracking-wider">
             Method
             <select
               value={apiMethod}
+              className="w-full px-3.5 py-2.5 bg-surface border border-border rounded-xl text-sm font-normal text-text outline-none focus:border-accent focus:ring-1 focus:ring-accent/20 transition-all mt-1"
               onChange={(e) => setApiMethod(e.target.value)}
             >
               <option value="GET">GET</option>
@@ -264,13 +281,12 @@ export default function ToolForm({ tool, onSuccess, onCancel }: Props) {
               <option value="DELETE">DELETE</option>
             </select>
           </label>
-          <label>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%" }}>
+          <label className="flex flex-col gap-1.5 text-xs font-bold text-text-secondary uppercase tracking-wider">
+            <div className="flex justify-between items-center w-full">
               <span>POST body template (optional)</span>
               <button
                 type="button"
-                className="btn-secondary"
-                style={{ fontSize: "0.75rem", padding: "0.25rem 0.6rem" }}
+                className="px-2.5 py-1 bg-surface hover:bg-surface-hover border border-border text-text text-[11px] font-semibold rounded transition-colors cursor-pointer"
                 onClick={(e) => {
                   e.preventDefault();
                   handleGenerateSchema();
@@ -281,14 +297,16 @@ export default function ToolForm({ tool, onSuccess, onCancel }: Props) {
             </div>
             <textarea
               placeholder='{"id": "{id}"}'
+              className="w-full px-3.5 py-2.5 bg-surface border border-border rounded-xl text-sm font-normal text-text outline-none focus:border-accent focus:ring-1 focus:ring-accent/20 transition-all placeholder-text-secondary mt-1"
               value={apiBody}
               onChange={(e) => setApiBody(e.target.value)}
               rows={4}
             />
           </label>
-          <label>
+          <label className="flex flex-col gap-1.5 text-xs font-bold text-text-secondary uppercase tracking-wider">
             Parameters (JSON Schema)
             <textarea
+              className="w-full px-3.5 py-2.5 bg-surface border border-border rounded-xl text-sm font-normal text-text outline-none focus:border-accent focus:ring-1 focus:ring-accent/20 transition-all placeholder-text-secondary mt-1 font-mono text-xs"
               value={parametersJson}
               onChange={(e) => setParametersJson(e.target.value)}
               rows={8}
@@ -298,13 +316,21 @@ export default function ToolForm({ tool, onSuccess, onCancel }: Props) {
         </div>
       )}
 
-      <div className="create-tool-actions">
+      <div className="flex justify-end gap-3 mt-4 border-t border-border/50 pt-4">
         {onCancel && (
-          <button type="button" className="btn-secondary" onClick={onCancel}>
+          <button 
+            type="button" 
+            className="px-4 py-2 bg-surface hover:bg-surface-hover border border-border text-text text-sm font-semibold rounded-lg cursor-pointer transition-colors" 
+            onClick={onCancel}
+          >
             Cancel
           </button>
         )}
-        <button type="submit" className="btn-create-tool" disabled={busy}>
+        <button 
+          type="submit" 
+          className="px-4 py-2 bg-accent hover:bg-accent-dim text-white text-sm font-semibold rounded-lg cursor-pointer transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed" 
+          disabled={busy}
+        >
           {busy ? "Saving…" : isEdit ? "Save changes" : "Create tool"}
         </button>
       </div>

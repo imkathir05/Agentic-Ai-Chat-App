@@ -1,3 +1,38 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *, .dark, .dark *));
+
+/* Theme overrides for Tailwind CSS v4 */
+@theme {
+  --font-sans: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --font-mono: "JetBrains Mono", "Consolas", monospace;
+
+  --color-bg: var(--bg);
+  --color-sidebar: var(--sidebar);
+  --color-surface: var(--surface);
+  --color-surface-hover: var(--surface-hover);
+  --color-border: var(--border);
+  --color-text: var(--text);
+  --color-text-secondary: var(--text-secondary);
+  --color-accent: var(--accent);
+  --color-accent-dim: var(--accent-dim);
+  --color-accent-glow: var(--accent-glow);
+  --color-error: var(--error);
+  --color-composer-bg: var(--composer-bg);
+  --color-composer-border: var(--composer-border);
+  --color-user-bg: var(--user-bg);
+  --color-assistant-bg: var(--assistant-bg);
+  --color-dashboard-bg: var(--dashboard-bg);
+  --color-card-bg: var(--card-bg);
+  --color-popover-bg: var(--popover-bg);
+  --color-filter-pill-active-bg: var(--filter-pill-active-bg);
+  --color-filter-pill-active-text: var(--filter-pill-active-text);
+
+  --shadow-custom: var(--shadow);
+  --radius-custom: var(--radius);
+  --radius-pill: var(--radius-pill);
+}
+
 /* Light theme (default) */
 :root,
 [data-theme="light"] {
@@ -54,12 +89,6 @@
   --filter-pill-active-text: #000000;
 }
 
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
-
 body {
   font-family: var(--font);
   background: var(--bg);
@@ -73,39 +102,8 @@ body {
   min-height: 100vh;
 }
 
-button {
-  font-family: inherit;
-  cursor: pointer;
-  border: none;
-  background: transparent;
-  transition: background 0.15s, border-color 0.15s, opacity 0.15s;
-  color: inherit;
-}
-
+/* Basic styling overrides fallback for standard unclassed components if any */
 button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
-}
-
-input,
-textarea,
-select {
-  font-family: inherit;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  color: var(--text);
-  border-radius: 8px;
-  padding: 0.5rem 0.75rem;
-}
-
-input:focus,
-textarea:focus,
-select:focus {
-  outline: 2px solid var(--accent);
-  outline-offset: 0;
-}
-
-input::placeholder,
-textarea::placeholder {
-  color: var(--text-secondary);
 }

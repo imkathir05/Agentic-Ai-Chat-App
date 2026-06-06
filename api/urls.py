@@ -10,6 +10,7 @@ urlpatterns = [
     path("api/auth/refresh", auth_views.refresh),
     path("api/auth/me", auth_views.me),
     path("api/auth/google", auth_views.google_auth),
+    path("api/auth/check-email", auth_views.check_email),
     path("api/agents", agent_views.agents_list_create),
     path("api/agents/<str:agent_id>", agent_views.agent_detail),
     path("api/agents/<str:agent_id>/tools", agent_views.agent_set_tools),

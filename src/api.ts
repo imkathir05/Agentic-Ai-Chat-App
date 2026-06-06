@@ -144,6 +144,16 @@ export async function googleLogin(token: string): Promise<{ user: User }> {
   return handleResponse(res);
 }
 
+export async function checkEmail(email: string): Promise<{ exists: boolean }> {
+  const res = await apiFetch(`${API_BASE}/auth/check-email`, {
+    ...fetchOpts,
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email }),
+  });
+  return handleResponse(res);
+}
+
 export async function logout(): Promise<void> {
   const res = await apiFetch(`${API_BASE}/auth/logout`, {
     ...fetchOpts,

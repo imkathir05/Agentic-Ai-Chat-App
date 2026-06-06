@@ -17,17 +17,21 @@ export default function EditToolModal({ open, tool, onClose, onSaved }: Props) {
   };
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal modal-full" onClick={(e) => e.stopPropagation()}>
-        <header className="modal-header">
-          <h2>Edit tool</h2>
-          <button type="button" className="modal-close" onClick={onClose}>
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[1000] p-4" onClick={onClose}>
+      <div className="bg-surface border border-border rounded-2xl w-full max-w-2xl p-6 relative shadow-xl text-text font-sans flex flex-col gap-4 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+        <header className="flex items-center justify-between pb-3 border-b border-border">
+          <h2 className="text-xl font-bold text-text">Edit tool</h2>
+          <button 
+            type="button" 
+            className="bg-transparent border-none text-2xl cursor-pointer text-text-secondary hover:text-text p-1 flex items-center justify-center transition-colors" 
+            onClick={onClose}
+          >
             ×
           </button>
         </header>
-        <div className="modal-body modal-create-tool">
-          <p className="create-tool-intro">
-            Editing <code>{tool.name}</code>
+        <div>
+          <p className="text-sm text-text-secondary mb-4 leading-relaxed">
+            Editing <code className="px-1.5 py-0.5 bg-surface-hover rounded font-mono text-xs">{tool.name}</code>
             {tool.builtin ? " (built-in)" : ""}
           </p>
           <ToolForm tool={tool} onSuccess={handleSuccess} onCancel={onClose} />

@@ -43,25 +43,25 @@ export default function Composer({
   const enabledTools = tools.filter((t) => t.enabled);
 
   return (
-    <div className={`composer-wrap ${centered ? "centered" : ""}`}>
+    <div className={`w-full max-w-3xl mx-auto px-4 pb-6 pt-4 ${centered ? "flex flex-col items-center justify-center text-center pb-8" : ""}`}>
       {centered && (
-        <div className="welcome-block">
-          <h1 className="welcome-title">
+        <div className="text-center mb-6">
+          <h1 className="text-3xl font-bold mb-2 text-text">
             {agentName ? `Chat with ${agentName}` : "Where should we begin?"}
           </h1>
           {agentName && (
-            <p className="welcome-subtitle">
+            <p className="text-sm text-text-secondary mt-1.5">
               This agent only uses its assigned tools and instructions.
             </p>
           )}
         </div>
       )}
 
-      <div className="composer-box">
-        <div className="composer-menu-wrap">
+      <div className="flex items-end gap-1 bg-composer-bg border border-composer-border rounded-3xl p-2.5 shadow-custom w-full max-w-3xl">
+        <div className="relative">
           <button
             type="button"
-            className="composer-icon-btn"
+            className="p-2 rounded-full text-text-secondary hover:bg-surface-hover hover:text-text disabled:opacity-55 disabled:cursor-not-allowed shrink-0 transition-all cursor-pointer"
             onClick={() => setMenuOpen(!menuOpen)}
             title="Tools"
           >
@@ -70,23 +70,23 @@ export default function Composer({
             </svg>
           </button>
           {menuOpen && (
-            <div className="tools-dropdown">
-              <p className="dropdown-title">Available tools</p>
+            <div className="absolute bottom-[calc(100%+8px)] left-0 w-72 max-h-60 overflow-y-auto bg-sidebar border border-border rounded-xl shadow-lg p-2 z-50 text-left">
+              <p className="text-[10px] font-bold text-text-secondary uppercase tracking-widest px-2 py-1">Available tools</p>
               {enabledTools.length === 0 ? (
-                <p className="dropdown-muted">No tools enabled</p>
+                <p className="text-xs text-text-secondary px-2.5 py-1.5">No tools enabled</p>
               ) : (
                 enabledTools.map((t) => (
                   <button
                     key={t.id}
                     type="button"
-                    className="dropdown-item"
+                    className="flex flex-col items-start w-full p-2.5 rounded-lg text-left hover:bg-surface-hover cursor-pointer transition-colors"
                     onClick={() => {
                       onSend(`Use the ${t.name} tool: `);
                       setMenuOpen(false);
                     }}
                   >
-                    <strong>{t.name}</strong>
-                    <span>{t.description.slice(0, 60)}…</span>
+                    <strong className="text-xs font-semibold text-text">{t.name}</strong>
+                    <span className="text-[10px] text-text-secondary truncate w-full mt-0.5">{t.description.slice(0, 60)}…</span>
                   </button>
                 ))
               )}
@@ -96,28 +96,33 @@ export default function Composer({
 
         <textarea
           ref={inputRef}
-          className="composer-input"
+          className="flex-1 border-none bg-transparent resize-none min-h-[24px] max-h-48 py-2 px-1 text-base text-text placeholder-text-secondary outline-none focus:outline-none"
           placeholder="Ask anything"
           rows={1}
           onKeyDown={handleKeyDown}
           disabled={loading}
         />
 
-        <div className="composer-actions">
-          <button type="button" className="composer-icon-btn" title="Voice" disabled>
+        <div className="flex items-center gap-1">
+          <button 
+            type="button" 
+            className="p-2 rounded-full text-text-secondary hover:bg-surface-hover hover:text-text disabled:opacity-55 disabled:cursor-not-allowed shrink-0 transition-all cursor-pointer" 
+            title="Voice" 
+            disabled
+          >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
               <path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 14 0h-2zm-5 9v3h-2v-3h2z" />
             </svg>
           </button>
           <button
             type="button"
-            className="composer-send"
+            className="p-2 rounded-full bg-text text-bg disabled:opacity-55 disabled:cursor-not-allowed flex items-center justify-center transition-all cursor-pointer"
             onClick={submit}
             disabled={loading}
             title="Send"
           >
             {loading ? (
-              <span className="send-spinner" />
+              <span className="w-4.5 h-4.5 border-2 border-bg/30 border-t-bg rounded-full animate-spin shrink-0" />
             ) : (
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M12 20V4m-7 7l7-7 7 7" />
@@ -128,12 +133,12 @@ export default function Composer({
       </div>
 
       {centered && (
-        <div className="quick-actions">
+        <div className="flex flex-wrap gap-2.5 justify-center mt-6">
           {QUICK_ACTIONS.map((a) => (
             <button
               key={a.label}
               type="button"
-              className="quick-action"
+              className="flex items-center gap-2 px-4 py-2 bg-surface hover:bg-surface-hover border border-border rounded-full text-sm font-medium text-text transition-all shadow-sm hover:shadow-md cursor-pointer"
               onClick={() => onSend(a.prompt)}
               disabled={loading}
             >

@@ -66,10 +66,10 @@ def register(request):
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def login(request):
-    username = request.data.get('username')
+    identity = request.data.get('username')
     password = request.data.get('password')
     
-    user = User.objects.filter(username=username).first()
+    user = User.objects.filter(username=identity).first() or User.objects.filter(email=identity).first()
     if user is None or not check_password(password, user.password):
         return Response({'detail': 'Invalid credentials'}, status=status.HTTP_401_UNAUTHORIZED)
         
@@ -181,3 +181,13 @@ def google_auth(request):
         return Response({'detail': f'Invalid token: {str(e)}'}, status=status.HTTP_400_BAD_REQUEST)
     except Exception as e:
         return Response({'detail': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def check_email(request):
+    identity = request.data.get('email')
+    if not identity:
+        return Response({'detail': 'Email or username is required'}, status=status.HTTP_400_BAD_REQUEST)
+    
+    exists = User.objects.filter(email=identity).exists() or User.objects.filter(username=identity).exists()
+    return Response({'exists': exists})
