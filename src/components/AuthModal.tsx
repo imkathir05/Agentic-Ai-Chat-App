@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { login, register, googleLogin, healthCheck, checkEmail } from '../api';
+import logoUrl from '../logo.png';
 
 interface AuthModalProps {
   open: boolean;
@@ -23,6 +24,7 @@ export default function AuthModal({ open, initialMode, onClose, onSuccess, googl
 
   const handleGoogleCallback = async (response: any) => {
     const idToken = response.credential;
+    console.log("Google ID Token:", idToken);
     if (!idToken) return;
 
     setError('');
@@ -164,9 +166,12 @@ export default function AuthModal({ open, initialMode, onClose, onSuccess, googl
           ×
         </button>
 
-        <h2 className="text-2xl font-bold text-center mb-8 mt-0 text-gray-900 dark:text-zinc-100">
-          Log in or sign up
-        </h2>
+        <div className="flex flex-col items-center mb-6">
+          <img src={logoUrl} alt="Agentic AI Logo" className="h-14 w-auto object-contain mb-3" />
+          <h2 className="text-2xl font-bold text-center m-0 text-gray-900 dark:text-zinc-100">
+            Log in or sign up
+          </h2>
+        </div>
         
         {error && (
           <div className="text-red-650 dark:text-red-400 text-sm text-center mb-4 bg-red-50 dark:bg-red-950/30 p-2.5 rounded-lg border border-red-200 dark:border-red-900/50">
@@ -176,22 +181,15 @@ export default function AuthModal({ open, initialMode, onClose, onSuccess, googl
 
         {step === 1 ? (
           <>
-            {localGoogleClientId ? (
-              <div 
-                id="google-signin-btn" 
-                style={{ 
-                  marginBottom: '16px', 
-                  display: 'flex', 
-                  justifyContent: 'center',
-                  width: '100%',
-                  minHeight: '44px'
-                }}
-              />
-            ) : (
+            <div className="relative mb-4">
               <button 
                 type="button" 
-                className="flex items-center w-full px-4 py-3 mb-4 bg-white dark:bg-zinc-800 border border-gray-300 dark:border-zinc-700 rounded-full text-[15px] font-medium cursor-pointer relative justify-center hover:bg-gray-50 dark:hover:bg-zinc-700 transition-colors text-gray-900 dark:text-zinc-100"
-                onClick={() => setError('Google Client ID not loaded yet')}
+                className="flex items-center w-full px-4 py-3 bg-white dark:bg-zinc-800 border border-gray-300 dark:border-zinc-700 rounded-full text-[15px] font-medium cursor-pointer relative justify-center hover:bg-gray-50 dark:hover:bg-zinc-700 transition-colors text-gray-900 dark:text-zinc-100"
+                onClick={() => {
+                  if (!localGoogleClientId) {
+                    setError('Google Client ID not loaded yet');
+                  }
+                }}
               >
                 <svg className="absolute left-5 w-5 h-5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
@@ -201,7 +199,24 @@ export default function AuthModal({ open, initialMode, onClose, onSuccess, googl
                 </svg>
                 Continue with Google
               </button>
-            )}
+              {localGoogleClientId && (
+                <div 
+                  style={{ 
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    height: '100%',
+                    opacity: 0,
+                    zIndex: 10,
+                    overflow: 'hidden',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <div id="google-signin-btn" style={{ width: '100%', height: '100%' }} />
+                </div>
+              )}
+            </div>
             <button type="button" className="flex items-center w-full px-4 py-3 mb-4 bg-white dark:bg-zinc-800 border border-gray-300 dark:border-zinc-700 rounded-full text-[15px] font-medium cursor-pointer relative justify-center hover:bg-gray-50 dark:hover:bg-zinc-700 transition-colors text-gray-900 dark:text-zinc-100">
               <svg className="absolute left-5 w-5 h-5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M22.675 0H1.325C.593 0 0 .593 0 1.325v21.351C0 23.407.593 24 1.325 24H12.82v-9.294H9.692v-3.622h3.128V8.413c0-3.1 1.893-4.788 4.659-4.788 1.325 0 2.463.099 2.795.143v3.24l-1.918.001c-1.504 0-1.795.715-1.795 1.763v2.313h3.587l-.467 3.622h-3.12V24h6.116c.73 0 1.323-.593 1.323-1.325V1.325C24 .593 23.407 0 22.675 0z" fill="#1877F2"/>

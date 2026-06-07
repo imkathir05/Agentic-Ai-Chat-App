@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import type { Theme } from '../theme';
+import logoUrl from '../logo.png';
 
 interface LandingPageProps {
   theme: Theme;
@@ -25,13 +26,8 @@ export default function LandingPage({ theme, onThemeChange, onLogin, onSignUp }:
       
       {/* Navigation */}
       <nav className="flex justify-between items-center py-4 px-6 md:px-16 border-b border-gray-100 dark:border-zinc-900 bg-white/80 dark:bg-zinc-950/80 backdrop-blur-md sticky top-0 z-50">
-        <div className="text-xl font-extrabold flex items-center gap-2.5 tracking-wider text-gray-800 dark:text-zinc-100 uppercase">
-          <div className="flex gap-0.5">
-            <span className="w-2.5 h-2.5 rounded-sm bg-red-500"></span>
-            <span className="w-2.5 h-2.5 rounded-sm bg-yellow-500"></span>
-            <span className="w-2.5 h-2.5 rounded-sm bg-green-500"></span>
-          </div>
-          Agentic AI
+        <div className="flex items-center">
+          <img src={logoUrl} alt="Agentic AI" className="h-11 w-auto object-contain" />
         </div>
         <div className="hidden md:flex gap-6 items-center">
           <a href="#" className="text-gray-600 hover:text-gray-900 dark:text-zinc-400 dark:hover:text-zinc-100 text-sm font-medium transition-colors">Agents</a>
@@ -220,13 +216,8 @@ export default function LandingPage({ theme, onThemeChange, onLogin, onSignUp }:
       <footer className="py-16 px-6 md:px-16 border-t border-gray-200 dark:border-zinc-900 bg-white dark:bg-zinc-950">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-start gap-12 lg:gap-16 flex-wrap">
           <div className="flex-[1.5] min-w-[250px]">
-            <div className="text-xl font-extrabold flex items-center gap-2.5 tracking-wider text-gray-800 dark:text-zinc-100 uppercase">
-              <div className="flex gap-0.5">
-                <span className="w-2.5 h-2.5 rounded-sm bg-red-500"></span>
-                <span className="w-2.5 h-2.5 rounded-sm bg-yellow-500"></span>
-                <span className="w-2.5 h-2.5 rounded-sm bg-green-500"></span>
-              </div>
-              Agentic AI
+            <div className="flex items-center">
+              <img src={logoUrl} alt="Agentic AI" className="h-11 w-auto object-contain" />
             </div>
             <p className="text-gray-500 dark:text-zinc-450 text-sm mt-4 leading-relaxed max-w-sm">
               The ultimate platform for creating, testing, and deploying intelligent AI agents with custom tool sets and secure isolated workspaces.

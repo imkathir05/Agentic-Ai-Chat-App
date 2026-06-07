@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import type { User } from "../api";
 import { sessionDisplayTitle, type ChatSession } from "../chatStorage";
 import type { Theme } from "../theme";
+import logoUrl from "../logo.png";
 
 export type AppView = "agents" | "tools" | "chat";
 
@@ -58,7 +59,7 @@ export default function Sidebar({
     <aside className="w-[var(--sidebar-width)] min-w-[var(--sidebar-width)] bg-sidebar border-r border-border flex flex-col h-screen select-none">
       <div className="flex items-center justify-between p-2.5">
         <div className="flex items-center pl-1">
-          <span className="text-xl text-accent font-bold">◇</span>
+          <img src={logoUrl} alt="Agentic AI" className="h-11 w-auto object-contain" />
         </div>
         <button
           type="button"

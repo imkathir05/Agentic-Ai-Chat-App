@@ -90,13 +90,19 @@
 }
 
 body {
-  font-family: var(--font);
+  font-family: "Inter", var(--font);
   background: var(--bg);
   color: var(--text);
   min-height: 100vh;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
 }
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: "Outfit", var(--font-sans);
+  letter-spacing: -0.025em;
+}
+
 
 #root {
   min-height: 100vh;
