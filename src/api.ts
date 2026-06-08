@@ -60,6 +60,11 @@ export interface HealthResponse {
 const API_BASE = "/api";
 const DEV_BACKEND = "http://127.0.0.1:8000";
 
+export function getChatSocketUrl(): string {
+  const proto = window.location.protocol === "https:" ? "wss:" : "ws:";
+  return `${proto}//${window.location.host}/ws`;
+}
+
 const fetchOpts: RequestInit = {
   credentials: "include",
 };

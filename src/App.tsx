@@ -7,7 +7,7 @@ import {
   fetchTools,
   healthCheck,
   logout,
-  sendChat,
+  getChatSocketUrl,
   type Agent,
   type Tool,
   type User,
@@ -217,6 +217,16 @@ export default function App() {
   const [theme, setTheme] = useState<Theme>(() => loadTheme());
   const [googleClientId, setGoogleClientId] = useState("");
 
+  const activeSocketRef = useRef<WebSocket | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (activeSocketRef.current) {
+        activeSocketRef.current.close();
+      }
+    };
+  }, []);
+
   const handleThemeChange = useCallback((next: Theme) => {
     setTheme(next);
     applyTheme(next);
@@ -384,18 +394,10 @@ export default function App() {
           : messages;
 
       if (!sessionId) {
-        const s = createSession(
-          agent?.id,
-          agent
-            ? workspaceTitleForAgent(agent.name, list, agent.id)
-            : workspaceTitleGeneral(list)
-        );
-        sessionId = s.id;
+        sessionId = "session-" + Math.random().toString(36).substring(2, 9);
         currentMessages = [];
-        list = [s, ...list];
-        persistSessions(list);
-        setActiveId(s.id);
-        saveActiveId(s.id);
+        setActiveId(sessionId);
+        saveActiveId(sessionId);
       }
 
       const userMsg: Message = { role: "user", content: text };
@@ -407,56 +409,164 @@ export default function App() {
           ? titleFromMessage(text)
           : undefined);
 
-      const applyMessages = (msgs: Message[], title?: string) => {
-        persistSessions(
-          list.map((s) =>
-            s.id === sessionId
-              ? {
-                  ...s,
-                  messages: msgs,
-                  title: title ?? s.title,
-                  updatedAt: Date.now(),
-                }
-              : s
-          )
-        );
+      const updateSessionMessages = (msgs: Message[], title?: string) => {
+        setSessions((prevSessions) => {
+          let found = false;
+          let next = prevSessions.map((s) => {
+            if (s.id === sessionId) {
+              found = true;
+              return {
+                ...s,
+                messages: msgs,
+                title: title ?? s.title,
+                updatedAt: Date.now(),
+              };
+            }
+            return s;
+          });
+
+          if (!found) {
+            const newS: ChatSession = {
+              id: sessionId!,
+              agentId: agent?.id,
+              messages: msgs,
+              title: title || (agent ? workspaceTitleForAgent(agent.name, prevSessions, agent.id) : workspaceTitleGeneral(prevSessions)),
+              createdAt: Date.now(),
+              updatedAt: Date.now(),
+            };
+            next = [newS, ...prevSessions];
+          }
+
+          const normalized = normalizeSessions(next);
+          saveSessions(normalized);
+          return normalized;
+        });
       };
 
-      applyMessages(nextMessages, resolvedTitle);
+      updateSessionMessages(nextMessages, resolvedTitle);
       setLoading(true);
+      setChatError("");
+
+      if (activeSocketRef.current) {
+        activeSocketRef.current.close();
+      }
 
       try {
-        const res = await sendChat(
-          nextMessages.map((m) => ({ role: m.role, content: m.content })),
-          sanitizeApiKey(apiKey, provider) || undefined,
-          model || undefined,
-          provider,
-          agent?.id
-        );
-        applyMessages([
-          ...nextMessages,
-          {
-            role: "assistant",
-            content: res.message,
-            toolTrace: res.tool_trace,
-          },
-        ]);
+        const wsUrl = getChatSocketUrl();
+        const socket = new WebSocket(wsUrl);
+        activeSocketRef.current = socket;
+
+        let currentAssistantContent = "";
+        let currentToolTrace: any[] = [];
+
+        socket.onopen = () => {
+          const payload = {
+            type: "chat",
+            messages: nextMessages.map((m) => ({ role: m.role, content: m.content })),
+            api_key: sanitizeApiKey(apiKey, provider) || undefined,
+            model: model || undefined,
+            provider: provider,
+            agent_id: agent?.id,
+          };
+          socket.send(JSON.stringify(payload));
+        };
+
+        socket.onmessage = (event) => {
+          try {
+            const chunk = JSON.parse(event.data);
+
+            if (chunk.type === "error") {
+              if (chunk.code === "unauthorized") {
+                setUser(null);
+                setLoginOpen(true);
+                setAuthMode("login");
+                setChatError("Session expired. Please log in again.");
+              } else {
+                setChatError(chunk.message || "An error occurred.");
+              }
+              socket.close();
+              return;
+            }
+
+            if (chunk.type === "content") {
+              currentAssistantContent += chunk.delta;
+              const updatedAssistantMsg: Message = {
+                role: "assistant",
+                content: currentAssistantContent,
+                toolTrace: [...currentToolTrace],
+              };
+              updateSessionMessages([...nextMessages, updatedAssistantMsg]);
+            } else if (chunk.type === "tool_start") {
+              currentToolTrace.push({
+                tool: chunk.tool,
+                arguments: chunk.arguments,
+                result: "Running...",
+                status: "running",
+                call_id: chunk.call_id,
+              });
+              const updatedAssistantMsg: Message = {
+                role: "assistant",
+                content: currentAssistantContent,
+                toolTrace: [...currentToolTrace],
+              };
+              updateSessionMessages([...nextMessages, updatedAssistantMsg]);
+            } else if (chunk.type === "tool_end") {
+              currentToolTrace = currentToolTrace.map((t) =>
+                t.call_id === chunk.call_id
+                  ? { ...t, result: chunk.result, status: chunk.status }
+                  : t
+              );
+              const updatedAssistantMsg: Message = {
+                role: "assistant",
+                content: currentAssistantContent,
+                toolTrace: [...currentToolTrace],
+              };
+              updateSessionMessages([...nextMessages, updatedAssistantMsg]);
+            } else if (chunk.type === "done") {
+              const finalAssistantMsg: Message = {
+                role: "assistant",
+                content: chunk.message || currentAssistantContent,
+                toolTrace: chunk.tool_trace || currentToolTrace,
+              };
+              updateSessionMessages([...nextMessages, finalAssistantMsg]);
+              socket.close();
+            }
+          } catch (e) {
+            console.error("Error parsing WebSocket message:", e);
+          }
+        };
+
+        socket.onerror = (err) => {
+          console.error("WebSocket error:", err);
+          setChatError("WebSocket connection failed.");
+          setLoading(false);
+        };
+
+        socket.onclose = () => {
+          setLoading(false);
+          if (activeSocketRef.current === socket) {
+            activeSocketRef.current = null;
+          }
+        };
       } catch (e) {
-        const err = e as Error & { status?: number };
-        if (err.status === 401) {
-          setUser(null);
-          setLoginOpen(true);
-          setAuthMode("login");
-          setChatError("Session expired. Please log in again.");
-        } else {
-          setChatError(err instanceof Error ? err.message : String(e));
-        }
-        applyMessages(nextMessages);
-      } finally {
+        setChatError(e instanceof Error ? e.message : String(e));
         setLoading(false);
       }
     },
-    [activeId, agents, apiKey, messages, model, persistSessions, provider, sessions]
+    [
+      activeId,
+      agents,
+      apiKey,
+      messages,
+      model,
+      provider,
+      sessions,
+      setUser,
+      setSessions,
+      setActiveId,
+      setChatError,
+      setLoading,
+    ]
   );
 
   const startWorkWithAgent = useCallback(

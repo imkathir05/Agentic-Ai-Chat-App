@@ -26,9 +26,9 @@ copy .env.example .env
 # Edit .env: LLM_PROVIDER, GROQ_API_KEY or GEMINI_API_KEY
 python manage.py migrate
 python manage.py runserver 127.0.0.1:8000
+# In a separate terminal, run the WebSocket streaming server:
+python websocket_server.py
 ```
-
-Or double-click `start-backend.bat`.
 
 ### Frontend
 

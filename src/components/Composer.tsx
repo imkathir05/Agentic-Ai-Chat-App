@@ -23,13 +23,40 @@ export default function Composer({
   onSend,
 }: Props) {
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
-  const submit = () => {
-    const text = inputRef.current?.value.trim();
-    if (!text || loading) return;
+  const submit = async () => {
+    let text = inputRef.current?.value.trim() || "";
+    if (!text && !selectedFile) return;
+    if (loading) return;
+
+    if (selectedFile) {
+      if (
+        selectedFile.type.startsWith("text/") ||
+        selectedFile.name.endsWith(".txt") ||
+        selectedFile.name.endsWith(".md") ||
+        selectedFile.name.endsWith(".json") ||
+        selectedFile.name.endsWith(".js") ||
+        selectedFile.name.endsWith(".py") ||
+        selectedFile.name.endsWith(".ts") ||
+        selectedFile.name.endsWith(".tsx")
+      ) {
+        try {
+          const content = await selectedFile.text();
+          text = `[File: ${selectedFile.name}]\n\`\`\`\n${content}\n\`\`\`\n\n${text}`;
+        } catch (e) {
+          text = `[File: ${selectedFile.name} (Error reading content)]\n\n${text}`;
+        }
+      } else {
+        text = `[File: ${selectedFile.name} (${(selectedFile.size / 1024).toFixed(1)} KB)]\n\n${text}`;
+      }
+    }
+
     onSend(text);
     if (inputRef.current) inputRef.current.value = "";
+    setSelectedFile(null);
     setMenuOpen(false);
   };
 
@@ -70,7 +97,28 @@ export default function Composer({
             </svg>
           </button>
           {menuOpen && (
-            <div className="absolute bottom-[calc(100%+8px)] left-0 w-72 max-h-60 overflow-y-auto bg-sidebar border border-border rounded-xl shadow-lg p-2 z-50 text-left">
+            <div className="absolute bottom-[calc(100%+8px)] left-0 w-72 max-h-60 overflow-y-auto bg-sidebar border border-border rounded-xl shadow-lg p-2 z-50 text-left flex flex-col gap-1">
+              <button
+                type="button"
+                className="flex items-center gap-2.5 w-full p-2.5 rounded-lg text-left hover:bg-surface-hover cursor-pointer transition-colors border-none bg-transparent"
+                onClick={() => {
+                  fileInputRef.current?.click();
+                  setMenuOpen(false);
+                }}
+              >
+                <div className="w-6 h-6 bg-accent/10 text-accent rounded-full flex items-center justify-center shrink-0">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                    <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
+                  </svg>
+                </div>
+                <div className="flex flex-col">
+                  <strong className="text-xs font-semibold text-text">Upload File</strong>
+                  <span className="text-[10px] text-text-secondary mt-0.5">Attach documents, logs, or code</span>
+                </div>
+              </button>
+
+              <div className="border-t border-border/50 my-1" />
+
               <p className="text-[10px] font-bold text-text-secondary uppercase tracking-widest px-2 py-1">Available tools</p>
               {enabledTools.length === 0 ? (
                 <p className="text-xs text-text-secondary px-2.5 py-1.5">No tools enabled</p>
@@ -94,14 +142,48 @@ export default function Composer({
           )}
         </div>
 
-        <textarea
-          ref={inputRef}
-          className="flex-1 border-none bg-transparent resize-none min-h-[24px] max-h-48 py-2 px-1 text-base text-text placeholder-text-secondary outline-none focus:outline-none"
-          placeholder="Ask anything"
-          rows={1}
-          onKeyDown={handleKeyDown}
-          disabled={loading}
+        <input
+          type="file"
+          ref={fileInputRef}
+          className="hidden"
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (file) {
+              setSelectedFile(file);
+            }
+            e.target.value = "";
+          }}
         />
+
+        <div className="flex-1 flex flex-col items-start gap-1.5 min-w-0">
+          {selectedFile && (
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-surface-hover border border-border rounded-xl text-xs font-medium text-text select-none">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
+              </svg>
+              <span className="truncate max-w-[240px]" title={selectedFile.name}>{selectedFile.name}</span>
+              <button
+                type="button"
+                onClick={() => setSelectedFile(null)}
+                className="text-text-secondary hover:text-text cursor-pointer p-0.5 rounded hover:bg-surface-hover/80 border-none bg-transparent"
+                title="Remove file"
+              >
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <line x1="18" y1="6" x2="6" y2="18" />
+                  <line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+              </button>
+            </div>
+          )}
+          <textarea
+            ref={inputRef}
+            className="w-full border-none bg-transparent resize-none min-h-[24px] max-h-48 py-2 px-1 text-base text-text placeholder-text-secondary outline-none focus:outline-none"
+            placeholder="Ask anything"
+            rows={1}
+            onKeyDown={handleKeyDown}
+            disabled={loading}
+          />
+        </div>
 
         <div className="flex items-center gap-1">
           <button 

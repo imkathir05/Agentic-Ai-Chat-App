@@ -1,5 +1,87 @@
-import { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import type { Message } from "../types/chat";
+
+function CodeBlock({ code, language }: { code: string; language: string }) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(code);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error("Failed to copy!", err);
+    }
+  };
+
+  return (
+    <div className="my-3 border border-border rounded-xl overflow-hidden bg-zinc-900 text-zinc-100 font-mono text-[13px] shadow-sm">
+      <div className="flex justify-between items-center px-4 py-2 bg-zinc-950 border-b border-zinc-800/80 text-xs text-zinc-400 font-sans select-none">
+        <span className="font-medium tracking-wide uppercase text-[10px] text-zinc-500">{language || "code"}</span>
+        <button
+          onClick={handleCopy}
+          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded hover:bg-zinc-800 hover:text-zinc-100 transition-colors cursor-pointer border-none bg-transparent text-zinc-400"
+        >
+          {copied ? (
+            <>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="text-green-400">
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+              <span className="text-[11px] font-medium text-green-400">Copied!</span>
+            </>
+          ) : (
+            <>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+              </svg>
+              <span className="text-[11px] font-medium">Copy code</span>
+            </>
+          )}
+        </button>
+      </div>
+      <pre className="p-4 overflow-x-auto whitespace-pre leading-relaxed font-mono">{code.trim()}</pre>
+    </div>
+  );
+}
+
+function renderTextWithInlineFormatting(text: string) {
+  const parts = text.split(/(`[^`]+`)/g);
+  return parts.map((part, index) => {
+    if (part.startsWith("`") && part.endsWith("`")) {
+      return (
+        <code key={index} className="px-1.5 py-0.5 bg-surface-hover rounded font-mono text-[13px] border border-border text-accent">
+          {part.slice(1, -1)}
+        </code>
+      );
+    }
+    
+    const boldParts = part.split(/(\*\*[^*]+\*\*)/g);
+    return (
+      <React.Fragment key={index}>
+        {boldParts.map((bp, bidx) => {
+          if (bp.startsWith("**") && bp.endsWith("**")) {
+            return <strong key={bidx} className="font-semibold text-text">{bp.slice(2, -2)}</strong>;
+          }
+          return bp;
+        })}
+      </React.Fragment>
+    );
+  });
+}
+
+function parseMarkdown(text: string) {
+  const parts = text.split(/(```[\s\S]*?```)/g);
+  return parts.map((part, index) => {
+    if (part.startsWith("```") && part.endsWith("```")) {
+      const match = part.match(/```(\w*)\n([\s\S]*?)```/);
+      const language = match ? match[1] : "";
+      const code = match ? match[2] : part.slice(3, -3);
+      return { type: "code", language, content: code, key: index };
+    }
+    return { type: "text", content: part, key: index };
+  });
+}
 
 interface Props {
   messages: Message[];
@@ -26,7 +108,18 @@ export default function ChatMessages({ messages, loading }: Props) {
               {msg.role === "user" ? "You" : "AI"}
             </div>
             <div className="flex-1 min-w-0">
-              <div className="whitespace-pre-wrap break-words leading-relaxed text-[15px] text-text">{msg.content}</div>
+              <div className="break-words leading-relaxed text-[15px] text-text">
+                {parseMarkdown(msg.content).map((part) => {
+                  if (part.type === "code") {
+                    return <CodeBlock key={part.key} code={part.content} language={part.language} />;
+                  }
+                  return (
+                    <span key={part.key} className="whitespace-pre-wrap">
+                      {renderTextWithInlineFormatting(part.content)}
+                    </span>
+                  );
+                })}
+              </div>
               {msg.toolTrace && msg.toolTrace.length > 0 && (
                 <div className="mt-3 text-xs flex flex-col gap-2">
                   {msg.toolTrace.map((t, j) => (
