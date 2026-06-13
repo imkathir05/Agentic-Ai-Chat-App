@@ -47,11 +47,14 @@ import { applyTheme, loadTheme, type Theme } from "./theme";
 const STORAGE_KEY = "agentic-ai-settings";
 const DEFAULT_GROQ_MODEL = "llama-3.3-70b-versatile";
 const DEFAULT_GEMINI_MODEL = "gemini-2.5-flash";
+const DEFAULT_HUGGINGFACE_MODEL = "Qwen/Qwen2.5-Coder-32B-Instruct";
 
-type LlmProvider = "groq" | "gemini";
+type LlmProvider = "groq" | "gemini" | "huggingface";
 
 function defaultModel(provider: LlmProvider): string {
-  return provider === "gemini" ? DEFAULT_GEMINI_MODEL : DEFAULT_GROQ_MODEL;
+  if (provider === "gemini") return DEFAULT_GEMINI_MODEL;
+  if (provider === "huggingface") return DEFAULT_HUGGINGFACE_MODEL;
+  return DEFAULT_GROQ_MODEL;
 }
 
 function normalizeModel(model: string | undefined, provider: LlmProvider): string {
@@ -59,6 +62,16 @@ function normalizeModel(model: string | undefined, provider: LlmProvider): strin
   const m = model.trim();
   if (provider === "gemini") {
     return m.startsWith("gemini-") ? m : DEFAULT_GEMINI_MODEL;
+  }
+  if (provider === "groq") {
+    if (m.startsWith("gemini-") || m.includes("/")) {
+      return DEFAULT_GROQ_MODEL;
+    }
+  }
+  if (provider === "huggingface") {
+    if (!m.includes("/")) {
+      return DEFAULT_HUGGINGFACE_MODEL;
+    }
   }
   return m;
 }
@@ -77,6 +90,13 @@ const GEMINI_MODEL_OPTIONS = [
   "gemini-2.0-flash",
 ];
 
+const HUGGINGFACE_MODEL_OPTIONS = [
+  "Qwen/Qwen2.5-Coder-32B-Instruct",
+  "meta-llama/Llama-3.3-70B-Instruct",
+  "mistralai/Mistral-7B-Instruct-v0.3",
+  "meta-llama/Meta-Llama-3-8B-Instruct",
+];
+
 /** Sent when opening a new agent workspace to run its instructions. */
 const AGENT_RUN_KICKOFF =
   "Begin. Follow your instructions and execute your task now.";
@@ -88,12 +108,25 @@ function loadSettings(provider: LlmProvider) {
       const data = JSON.parse(raw) as {
         apiKey?: string;
         geminiApiKey?: string;
+        huggingfaceApiKey?: string;
         model?: string;
+        groqModel?: string;
+        geminiModel?: string;
+        huggingfaceModel?: string;
       };
-      const key = data.apiKey ?? data.geminiApiKey;
+      let key = data.apiKey;
+      let modelName = data.groqModel ?? data.model;
+      if (provider === "gemini") {
+        key = data.geminiApiKey;
+        modelName = data.geminiModel ?? data.model;
+      } else if (provider === "huggingface") {
+        key = data.huggingfaceApiKey;
+        modelName = data.huggingfaceModel ?? data.model;
+      }
+
       return {
         apiKey: sanitizeApiKey(key, provider),
-        model: normalizeModel(data.model, provider),
+        model: normalizeModel(modelName, provider),
       };
     }
   } catch {
@@ -102,6 +135,24 @@ function loadSettings(provider: LlmProvider) {
   return { model: defaultModel(provider) };
 }
 
+const PROVIDERS = [
+  {
+    id: "groq" as const,
+    name: "Groq",
+    models: GROQ_MODEL_OPTIONS,
+  },
+  {
+    id: "gemini" as const,
+    name: "Google Gemini",
+    models: GEMINI_MODEL_OPTIONS,
+  },
+  {
+    id: "huggingface" as const,
+    name: "Hugging Face",
+    models: HUGGINGFACE_MODEL_OPTIONS,
+  },
+];
+
 function ModelSelector({
   model,
   provider,
@@ -109,7 +160,7 @@ function ModelSelector({
 }: {
   model: string;
   provider: LlmProvider;
-  onChange: (m: string) => void;
+  onChange: (m: string, p: LlmProvider) => void;
 }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -124,8 +175,6 @@ function ModelSelector({
     return () => document.removeEventListener("mousedown", handleClick);
   }, [open]);
 
-  const options = provider === "gemini" ? GEMINI_MODEL_OPTIONS : GROQ_MODEL_OPTIONS;
-
   return (
     <div className="relative" ref={ref}>
       <button
@@ -133,7 +182,10 @@ function ModelSelector({
         className={`flex items-center gap-2 bg-transparent border-none text-lg font-semibold px-2 py-1.5 cursor-pointer text-text rounded-lg hover:bg-surface-hover transition-colors ${open ? "bg-surface-hover" : ""}`}
         onClick={() => setOpen(!open)}
       >
-        <span>{model}</span>
+        <span className="text-xs text-text-secondary uppercase tracking-wider mr-1 px-1.5 py-0.5 rounded bg-surface border border-border">
+          {provider === "gemini" ? "Gemini" : provider === "huggingface" ? "HF" : "Groq"}
+        </span>
+        <span className="max-w-[200px] truncate">{model}</span>
         <svg
           width="16"
           height="16"
@@ -147,24 +199,33 @@ function ModelSelector({
         </svg>
       </button>
       {open && (
-        <div className="absolute top-[calc(100%+4px)] left-0 min-w-[260px] bg-surface border border-border rounded-xl shadow-lg p-2 z-50 flex flex-col">
-          {options.map((m) => (
-            <button
-              key={m}
-              type="button"
-              className={`flex items-center justify-between w-full px-3.5 py-2.5 border-none bg-transparent text-text text-[15px] font-medium text-left rounded-lg cursor-pointer hover:bg-surface-hover transition-colors ${model === m ? "text-accent" : ""}`}
-              onClick={() => {
-                onChange(m);
-                setOpen(false);
-              }}
-            >
-              <span>{m}</span>
-              {model === m && (
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="text-accent shrink-0">
-                  <path d="M20 6L9 17l-5-5" />
-                </svg>
-              )}
-            </button>
+        <div className="absolute top-[calc(100%+4px)] left-0 min-w-[320px] bg-surface border border-border rounded-xl shadow-lg p-2.5 z-50 flex flex-col gap-2 max-h-[480px] overflow-y-auto">
+          {PROVIDERS.map((group) => (
+            <div key={group.id} className="flex flex-col">
+              <div className="px-3.5 py-1 text-[11px] font-bold text-text-secondary uppercase tracking-wider bg-surface-hover/30 rounded-md mb-1">
+                {group.name}
+              </div>
+              {group.models.map((m) => (
+                <button
+                  key={m}
+                  type="button"
+                  className={`flex items-center justify-between w-full px-3.5 py-2 border-none bg-transparent text-text text-[14px] font-medium text-left rounded-lg cursor-pointer hover:bg-surface-hover transition-colors ${model === m && provider === group.id ? "text-accent" : ""}`}
+                  onClick={(e) => {
+                    console.log("ModelSelector button clicked:", m, "provider:", group.id);
+                    e.stopPropagation();
+                    onChange(m, group.id);
+                    setOpen(false);
+                  }}
+                >
+                  <span className="truncate mr-2">{m}</span>
+                  {model === m && provider === group.id && (
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="text-accent shrink-0">
+                      <path d="M20 6L9 17l-5-5" />
+                    </svg>
+                  )}
+                </button>
+              ))}
+            </div>
           ))}
         </div>
       )}
@@ -183,6 +244,9 @@ export default function App() {
   const [activeId, setActiveId] = useState<string | null>(() => loadActiveId());
   const [apiKey, setApiKey] = useState(saved.apiKey ?? "");
   const [model, setModel] = useState(saved.model);
+  console.log("App render state:", { provider, model, apiKeyLength: apiKey?.length });
+
+
   const [loading, setLoading] = useState(false);
   const [tools, setTools] = useState<Tool[]>([]);
   const [agents, setAgents] = useState<Agent[]>([]);
@@ -282,11 +346,24 @@ export default function App() {
   const messages = activeSession?.messages ?? [];
 
   useEffect(() => {
-    localStorage.setItem(
-      STORAGE_KEY,
-      JSON.stringify({ apiKey, model })
-    );
-  }, [apiKey, model]);
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      const data = raw ? JSON.parse(raw) : {};
+      if (provider === "gemini") {
+        data.geminiApiKey = apiKey;
+        data.geminiModel = model;
+      } else if (provider === "huggingface") {
+        data.huggingfaceApiKey = apiKey;
+        data.huggingfaceModel = model;
+      } else {
+        data.apiKey = apiKey;
+        data.groqModel = model;
+      }
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    } catch {
+      /* ignore */
+    }
+  }, [apiKey, model, provider]);
 
   const persistSessions = useCallback((next: ChatSession[]) => {
     const normalized = normalizeSessions(next);
@@ -342,9 +419,11 @@ export default function App() {
       .then((h) => {
         setBackendOk(true);
         setServerHasApiKey(Boolean(h.has_api_key));
-        const p = (h.provider === "gemini" ? "gemini" : "groq") as LlmProvider;
+        const p = (h.provider === "gemini" ? "gemini" : h.provider === "huggingface" ? "huggingface" : "groq") as LlmProvider;
         setProvider(p);
-        if (h.model) setModel(normalizeModel(h.model, p));
+        const saved = loadSettings(p);
+        setApiKey(saved.apiKey ?? "");
+        setModel(saved.model || normalizeModel(h.model, p));
         if (h.google_client_id) setGoogleClientId(h.google_client_id);
       })
       .catch(() => {
@@ -762,7 +841,7 @@ export default function App() {
 
       <main className={`flex-1 flex flex-col min-w-0 h-screen ${appView !== "chat" ? "bg-dashboard-bg" : ""}`}>
         {appView === "chat" && (
-          <header className="flex items-center gap-2 px-4 min-h-[52px] border-b border-border bg-sidebar/50 backdrop-blur-sm">
+          <header className="relative z-20 flex items-center gap-2 px-4 min-h-[52px] border-b border-border bg-sidebar/50 backdrop-blur-sm">
             {!sidebarOpen && (
               <button
                 type="button"
@@ -779,7 +858,18 @@ export default function App() {
             <ModelSelector 
               model={model} 
               provider={provider} 
-              onChange={(newModel) => setModel(normalizeModel(newModel, provider))} 
+              onChange={(newModel, newProvider) => {
+                console.log("ModelSelector selected:", { newModel, newProvider, currentProvider: provider, currentModel: model });
+                if (newProvider !== provider) {
+                  console.log("ModelSelector provider switching to:", newProvider);
+                  setProvider(newProvider);
+                  const saved = loadSettings(newProvider);
+                  console.log("ModelSelector loaded keys for new provider:", saved);
+                  setApiKey(saved.apiKey ?? "");
+                }
+                console.log("ModelSelector setting model to:", newModel);
+                setModel(newModel);
+              }} 
             />
             {sessionAgent && (
               <span className="text-xs px-2.5 py-1 rounded-full bg-surface-hover border border-border text-accent font-medium max-w-[180px] overflow-hidden text-ellipsis whitespace-nowrap" title={`${sessionAgent.tools_count} tools`}>
@@ -867,6 +957,12 @@ export default function App() {
         onApiKeyChange={setApiKey}
         onModelChange={setModel}
         onClearApiKey={() => setApiKey("")}
+        onProviderChange={(p) => {
+          setProvider(p);
+          const saved = loadSettings(p);
+          setApiKey(saved.apiKey ?? "");
+          setModel(saved.model || defaultModel(p));
+        }}
       />
       <CreateToolModal
         open={createToolOpen}

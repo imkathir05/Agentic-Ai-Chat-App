@@ -177,14 +177,15 @@ export async function sendChat(
   messages: { role: string; content: string }[],
   apiKey?: string,
   model?: string,
-  provider: "groq" | "gemini" = "groq",
+  provider: "groq" | "gemini" | "huggingface" = "groq",
   agentId?: string
 ): Promise<ChatResponse> {
   const body: Record<string, unknown> = { messages, model };
   if (agentId) body.agent_id = agentId;
   if (apiKey) {
     if (provider === "groq") body.groq_api_key = apiKey;
-    else body.gemini_api_key = apiKey;
+    else if (provider === "gemini") body.gemini_api_key = apiKey;
+    else body.huggingface_api_key = apiKey;
   }
   const res = await apiFetch(`${API_BASE}/chat`, {
     ...fetchOpts,

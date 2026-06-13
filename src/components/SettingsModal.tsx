@@ -1,6 +1,6 @@
 interface Props {
   open: boolean;
-  provider: "groq" | "gemini";
+  provider: "groq" | "gemini" | "huggingface";
   apiKey: string;
   model: string;
   backendOk: boolean | null;
@@ -9,6 +9,7 @@ interface Props {
   onApiKeyChange: (v: string) => void;
   onModelChange: (v: string) => void;
   onClearApiKey?: () => void;
+  onProviderChange?: (p: "groq" | "gemini" | "huggingface") => void;
 }
 
 const GROQ_MODELS = [
@@ -25,6 +26,13 @@ const GEMINI_MODELS = [
   "gemini-2.0-flash",
 ];
 
+const HUGGINGFACE_MODELS = [
+  "Qwen/Qwen2.5-Coder-32B-Instruct",
+  "meta-llama/Llama-3.3-70B-Instruct",
+  "mistralai/Mistral-7B-Instruct-v0.3",
+  "meta-llama/Meta-Llama-3-8B-Instruct",
+];
+
 export default function SettingsModal({
   open,
   provider,
@@ -36,12 +44,20 @@ export default function SettingsModal({
   onApiKeyChange,
   onModelChange,
   onClearApiKey,
+  onProviderChange,
 }: Props) {
   if (!open) return null;
 
   const isGroq = provider === "groq";
-  const modelList = isGroq ? GROQ_MODELS : GEMINI_MODELS;
-  const defaultModel = isGroq ? "llama-3.3-70b-versatile" : "gemini-2.5-flash";
+  const isGemini = provider === "gemini";
+  const isHF = provider === "huggingface";
+
+  const modelList = isGroq ? GROQ_MODELS : isGemini ? GEMINI_MODELS : HUGGINGFACE_MODELS;
+  const defaultModel = isGroq
+    ? "llama-3.3-70b-versatile"
+    : isGemini
+      ? "gemini-2.5-flash"
+      : "Qwen/Qwen2.5-Coder-32B-Instruct";
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[1000] p-4" onClick={onClose}>
@@ -57,9 +73,24 @@ export default function SettingsModal({
           </button>
         </header>
         <div className="flex flex-col gap-4">
-          <p className="text-sm text-text-secondary">
-            LLM: <strong className="text-text font-semibold">{isGroq ? "Groq" : "Google Gemini"}</strong>
-          </p>
+          {onProviderChange ? (
+            <label className="flex flex-col gap-1.5 text-xs font-bold text-text-secondary uppercase tracking-wider">
+              LLM Provider
+              <select
+                value={provider}
+                onChange={(e) => onProviderChange(e.target.value as any)}
+                className="w-full px-3.5 py-2.5 bg-surface border border-border rounded-xl text-sm font-normal text-text outline-none focus:border-accent focus:ring-1 focus:ring-accent/20 transition-all mt-1"
+              >
+                <option value="groq">Groq</option>
+                <option value="gemini">Google Gemini</option>
+                <option value="huggingface">Hugging Face</option>
+              </select>
+            </label>
+          ) : (
+            <p className="text-sm text-text-secondary">
+              LLM: <strong className="text-text font-semibold">{isGroq ? "Groq" : isGemini ? "Google Gemini" : "Hugging Face"}</strong>
+            </p>
+          )}
           <p className="text-sm text-text-secondary">
             Backend:{" "}
             <span className={`font-semibold ${backendOk ? "text-accent" : "text-error"}`}>
@@ -70,13 +101,13 @@ export default function SettingsModal({
             Server API key:{" "}
             <span className={`font-semibold ${serverHasApiKey ? "text-accent" : "text-error"}`}>
               {serverHasApiKey
-                ? `Set in backend/.env (${isGroq ? "GROQ_API_KEY" : "GEMINI_API_KEY"})`
+                ? `Set in backend/.env (${isGroq ? "GROQ_API_KEY" : isGemini ? "GEMINI_API_KEY" : "HUGGINGFACE_API_KEY"})`
                 : "Not set in .env"}
             </span>
           </p>
           
           <label className="flex flex-col gap-1.5 text-xs font-bold text-text-secondary uppercase tracking-wider">
-            {isGroq ? "Groq API Key (optional override)" : "Gemini API Key (optional override)"}
+            {isGroq ? "Groq API Key (optional override)" : isGemini ? "Gemini API Key (optional override)" : "Hugging Face Token (optional override)"}
             <input
               type="password"
               placeholder={
@@ -84,7 +115,9 @@ export default function SettingsModal({
                   ? "Leave empty to use backend .env key"
                   : isGroq
                     ? "gsk_… or set GROQ_API_KEY in backend/.env"
-                    : "AIza… or set GEMINI_API_KEY in backend/.env"
+                    : isGemini
+                      ? "AIza… or set GEMINI_API_KEY in backend/.env"
+                      : "hf_… or set HUGGINGFACE_API_KEY in backend/.env"
               }
               className="w-full px-3.5 py-2.5 bg-surface border border-border rounded-xl text-sm font-normal text-text outline-none focus:border-accent focus:ring-1 focus:ring-accent/20 transition-all placeholder-text-secondary mt-1"
               value={apiKey}
@@ -102,22 +135,39 @@ export default function SettingsModal({
             </button>
           )}
           
-          <label className="flex flex-col gap-1.5 text-xs font-bold text-text-secondary uppercase tracking-wider">
-            Model
-            <input
-              type="text"
-              placeholder={defaultModel}
-              className="w-full px-3.5 py-2.5 bg-surface border border-border rounded-xl text-sm font-normal text-text outline-none focus:border-accent focus:ring-1 focus:ring-accent/20 transition-all placeholder-text-secondary mt-1"
-              value={model}
-              onChange={(e) => onModelChange(e.target.value)}
-              list="llm-models"
-            />
-            <datalist id="llm-models">
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-bold text-text-secondary uppercase tracking-wider">
+              Model
+            </label>
+            <select
+              value={modelList.includes(model) ? model : "custom"}
+              onChange={(e) => {
+                const val = e.target.value;
+                if (val === "custom") {
+                  onModelChange("");
+                } else {
+                  onModelChange(val);
+                }
+              }}
+              className="w-full px-3.5 py-2.5 bg-surface border border-border rounded-xl text-sm font-normal text-text outline-none focus:border-accent focus:ring-1 focus:ring-accent/20 transition-all mt-1"
+            >
               {modelList.map((m) => (
-                <option key={m} value={m} />
+                <option key={m} value={m}>
+                  {m}
+                </option>
               ))}
-            </datalist>
-          </label>
+              <option value="custom">Custom Model...</option>
+            </select>
+            {(!modelList.includes(model) || model === "") && (
+              <input
+                type="text"
+                placeholder={defaultModel}
+                className="w-full px-3.5 py-2.5 bg-surface border border-border rounded-xl text-sm font-normal text-text outline-none focus:border-accent focus:ring-1 focus:ring-accent/20 transition-all placeholder-text-secondary mt-1"
+                value={model}
+                onChange={(e) => onModelChange(e.target.value)}
+              />
+            )}
+          </div>
         </div>
       </div>
     </div>

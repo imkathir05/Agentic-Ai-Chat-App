@@ -131,6 +131,7 @@ async def handler(websocket, path=None):
                 messages = data.get("messages", [])
                 api_key = data.get("api_key")
                 model = data.get("model")
+                provider = data.get("provider")
                 agent_id = data.get("agent_id")
 
                 try:
@@ -144,6 +145,7 @@ async def handler(websocket, path=None):
                         model=model,
                         system_prompt=agent_cfg.get("system_prompt"),
                         tool_ids=agent_cfg.get("tool_ids"),
+                        provider=provider,
                     )
 
                     next_fn = run_generator_in_thread(gen)

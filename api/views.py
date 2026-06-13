@@ -7,7 +7,7 @@ from rest_framework.response import Response
 
 from core import agents as agent_service
 from core.agent import run_agent
-from core.env_keys import get_gemini_api_key, get_groq_api_key
+from core.env_keys import get_gemini_api_key, get_groq_api_key, get_huggingface_api_key
 from core.tools.registry import registry
 
 
@@ -18,6 +18,9 @@ def health(_request: Request) -> Response:
     if provider == "gemini":
         model = django_settings.GEMINI_MODEL
         has_key = bool(get_gemini_api_key())
+    elif provider == "huggingface":
+        model = django_settings.HUGGINGFACE_MODEL
+        has_key = bool(get_huggingface_api_key())
     else:
         provider = "groq"
         model = django_settings.GROQ_MODEL
@@ -42,9 +45,11 @@ def chat(request: Request) -> Response:
     api_key = (
         data.get("groq_api_key")
         or data.get("gemini_api_key")
+        or data.get("huggingface_api_key")
         or data.get("api_key")
     )
     model = data.get("model")
+    provider = data.get("provider")
 
     try:
         agent_id = data.get("agent_id")
@@ -58,6 +63,7 @@ def chat(request: Request) -> Response:
             tool_ids=agent_cfg["tool_ids"],
             agent_id=agent_cfg["id"],
             agent_name=agent_cfg["name"],
+            provider=provider,
         )
         return Response(result)
     except ValueError as e:

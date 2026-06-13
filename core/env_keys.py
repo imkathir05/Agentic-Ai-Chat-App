@@ -30,3 +30,16 @@ def get_gemini_api_key(explicit: str | None = None) -> str:
             os.getenv("GEMINI_API_KEY", os.getenv("GOOGLE_API_KEY", "")) or ""
         ).strip()
     return key
+
+
+def get_huggingface_api_key(explicit: str | None = None) -> str:
+    if explicit and str(explicit).strip():
+        return str(explicit).strip()
+
+    key = (django_settings.HUGGINGFACE_API_KEY or "").strip()
+    if not key:
+        _reload_dotenv()
+        key = (
+            os.getenv("HUGGINGFACE_API_KEY", os.getenv("HF_TOKEN", "")) or ""
+        ).strip()
+    return key
