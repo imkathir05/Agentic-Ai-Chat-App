@@ -112,6 +112,12 @@ export async function authMe(): Promise<{ user: User }> {
   return handleResponse(res);
 }
 
+export async function getWsToken(): Promise<string> {
+  const res = await apiFetch(`${API_BASE}/auth/ws-token`);
+  const data = await handleResponse<{ token: string }>(res);
+  return data.token;
+}
+
 export async function login(
   username: string,
   password: string

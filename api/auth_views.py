@@ -28,12 +28,12 @@ def set_auth_cookies(response, access_token, refresh_token):
     response.set_cookie(
         'access_token', access_token,
         max_age=getattr(settings, 'JWT_ACCESS_HOURS', 1) * 3600,
-        httponly=True, samesite='Lax'
+        httponly=True, samesite='Lax', path='/',
     )
     response.set_cookie(
         'refresh_token', refresh_token,
         max_age=getattr(settings, 'JWT_REFRESH_DAYS', 7) * 86400,
-        httponly=True, samesite='Lax'
+        httponly=True, samesite='Lax', path='/',
     )
 
 @api_view(['POST'])
@@ -119,6 +119,15 @@ def me(request):
             'email': request.user.email
         }
     })
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def ws_token(request):
+    """Return JWT for WebSocket auth (httpOnly cookies are not sent through all WS proxies)."""
+    token = request.COOKIES.get('access_token') or request.auth
+    if not token:
+        return Response({'detail': 'No access token'}, status=status.HTTP_401_UNAUTHORIZED)
+    return Response({'token': token})
 
 @api_view(['POST'])
 @permission_classes([AllowAny])

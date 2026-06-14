@@ -1,4 +1,4 @@
-django
+django>=4.2,<5
 djangorestframework
 django-cors-headers
 python-dotenv
@@ -6,3 +6,4 @@ httpx
 google-genai
 PyJWT
 websockets
+PyMySQL

@@ -9,6 +9,7 @@ urlpatterns = [
     path("api/auth/logout", auth_views.logout),
     path("api/auth/refresh", auth_views.refresh),
     path("api/auth/me", auth_views.me),
+    path("api/auth/ws-token", auth_views.ws_token),
     path("api/auth/google", auth_views.google_auth),
     path("api/auth/check-email", auth_views.check_email),
     path("api/agents", agent_views.agents_list_create),

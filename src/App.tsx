@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   authMe,
+  getWsToken,
   deleteAgent,
   deleteTool,
   fetchAgents,
@@ -531,7 +532,8 @@ export default function App() {
       }
 
       try {
-        const wsUrl = getChatSocketUrl();
+        const wsToken = await getWsToken();
+        const wsUrl = `${getChatSocketUrl()}?token=${encodeURIComponent(wsToken)}`;
         const socket = new WebSocket(wsUrl);
         activeSocketRef.current = socket;
 
@@ -628,7 +630,15 @@ export default function App() {
           }
         };
       } catch (e) {
-        setChatError(e instanceof Error ? e.message : String(e));
+        const err = e as Error & { status?: number };
+        if (err.status === 401 || err.message === "Unauthorized") {
+          setUser(null);
+          setLoginOpen(true);
+          setAuthMode("login");
+          setChatError("Session expired. Please log in again.");
+        } else {
+          setChatError(e instanceof Error ? e.message : String(e));
+        }
         setLoading(false);
       }
     },
