@@ -3,8 +3,12 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-BASE_DIR = Path(__file__).resolve().parent.parent
-load_dotenv(BASE_DIR / ".env")
+APP_DIR = Path(__file__).resolve().parent.parent
+REPO_ROOT = APP_DIR.parent.parent
+BASE_DIR = APP_DIR
+
+load_dotenv(REPO_ROOT / ".env")
+load_dotenv(APP_DIR / ".env", override=False)
 
 SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "dev-only-change-in-production")
 DEBUG = os.getenv("DEBUG", "true").lower() in ("1", "true", "yes")
@@ -70,16 +74,19 @@ TEMPLATES = [
     },
 ]
 
-ROOT_URLCONF = "agentic_ai.urls"
-WSGI_APPLICATION = "agentic_ai.wsgi.application"
+ROOT_URLCONF = "config.urls"
+WSGI_APPLICATION = "config.wsgi.application"
 
 DB_ENGINE = os.getenv("DB_ENGINE", "mysql").strip().lower()
 
 if DB_ENGINE == "sqlite":
+    _db_path = BASE_DIR / "db.sqlite3"
+    if not _db_path.exists() and (REPO_ROOT / "db.sqlite3").exists():
+        _db_path = REPO_ROOT / "db.sqlite3"
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.sqlite3",
-            "NAME": BASE_DIR / "db.sqlite3",
+            "NAME": _db_path,
         }
     }
 else:

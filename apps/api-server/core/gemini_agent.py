@@ -39,7 +39,7 @@ def _friendly_gemini_error(exc: genai_errors.APIError) -> str:
     ):
         return (
             "Invalid Gemini API key. Clear the key in Settings (use server .env) "
-            "or set GEMINI_API_KEY in backend/.env — https://aistudio.google.com/apikey"
+            "or set GEMINI_API_KEY in .env — https://aistudio.google.com/apikey"
         )
     if "404" in message and "model" in lower:
         return (
@@ -60,7 +60,7 @@ def _get_client(api_key: str | None = None) -> genai.Client:
     key = get_gemini_api_key(api_key)
     if not key:
         raise ValueError(
-            "Gemini API key is not set. Add GEMINI_API_KEY to backend/.env "
+            "Gemini API key is not set. Add GEMINI_API_KEY to .env "
             "(get a key at https://aistudio.google.com/apikey)."
         )
     return genai.Client(api_key=key)
@@ -68,7 +68,7 @@ def _get_client(api_key: str | None = None) -> genai.Client:
 
 def _content_to_parts(text: str) -> list[types.Part]:
     parts: list[types.Part] = []
-    image_urls = MARKDOWN_IMAGE_RE.findall(text)
+    image_urls = [match.group(2) for match in MARKDOWN_IMAGE_RE.finditer(text)]
     plain_text = MARKDOWN_IMAGE_RE.sub("", text).strip()
 
     if plain_text:

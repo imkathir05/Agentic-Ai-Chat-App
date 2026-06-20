@@ -1,54 +1,92 @@
 # Agentic AI — Django + React
 
-Full-stack agentic AI assistant with **Groq** or **Google Gemini**, per-user **agents**, and a **tool registry**.
+Full-stack agentic AI assistant with **Groq**, **Google Gemini**, or **Hugging Face**, per-user **agents**, and a **tool registry**.
 
 ## Architecture
 
 ```mermaid
 flowchart LR
-  UI[React Frontend] -->|/api/*| Django[Django REST API]
-  Django --> Agent[Agent Loop]
+  UI[Web Client] -->|/api/*| API[API Server]
+  API --> Agent[Agent Loop]
   Agent --> Groq[Groq API]
   Agent --> Gemini[Gemini API]
   Agent --> Registry[Tool Registry]
 ```
 
-## Quick start
+## Monorepo layout
 
-### Backend (Django)
-
-```powershell
-cd backend
-python -m venv venv
-.\venv\Scripts\activate
-pip install -r requirements.txt
-copy .env.example .env
-# Edit .env: LLM_PROVIDER, GROQ_API_KEY or GEMINI_API_KEY
-python manage.py migrate
-python manage.py runserver 127.0.0.1:8000
-# In a separate terminal, run the WebSocket streaming server:
-python websocket_server.py
+```
+agentic-ai-platform/
+├── apps/
+│   ├── api-server/          # Django REST API + WebSocket streaming
+│   │   ├── config/          # Django project settings & URLs
+│   │   ├── api/             # REST endpoints (auth, chat, tools, agents)
+│   │   ├── core/            # Domain logic, agents, LLM providers
+│   │   ├── manage.py
+│   │   ├── requirements.txt
+│   │   └── websocket_server.py
+│   └── web-client/          # React + Vite frontend
+│       ├── public/
+│       ├── src/
+│       ├── index.html
+│       ├── package.json
+│       └── vite.config.ts
+├── scripts/                 # Dev & startup scripts
+│   ├── dev.ps1              # Start all services (Windows)
+│   ├── start-api.ps1
+│   ├── start-websocket.ps1
+│   └── start-web.ps1
+├── .env.example             # Environment template (copy to .env)
+├── package.json             # Workspace root
+└── README.md
 ```
 
-### Frontend
+## Quick start
+
+### 1. Setup
 
 ```powershell
-cd frontend
+# From repository root
+python -m venv venv
+.\venv\Scripts\activate
+pip install -r apps/api-server/requirements.txt
+copy .env.example .env
+# Edit .env: LLM_PROVIDER, GROQ_API_KEY, GEMINI_API_KEY, etc.
+cd apps/api-server
+python manage.py migrate
+cd ..\..
 npm install
-npm run dev
+```
+
+### 2. Run (all services)
+
+```powershell
+.\scripts\dev.ps1
+```
+
+Or run each service in a separate terminal:
+
+```powershell
+.\scripts\start-api.ps1        # http://127.0.0.1:8000
+.\scripts\start-websocket.ps1  # ws://127.0.0.1:8001
+.\scripts\start-web.ps1        # http://localhost:5173
 ```
 
 Open **http://localhost:5173**
 
 ## Environment variables
 
+Copy `.env.example` to `.env` at the **repository root**.
+
 | Variable | Description |
 |----------|-------------|
-| `LLM_PROVIDER` | `groq` (default) or `gemini` |
+| `LLM_PROVIDER` | `groq` (default), `gemini`, or `huggingface` |
 | `GROQ_API_KEY` | Key from [Groq Console](https://console.groq.com/keys) |
 | `GROQ_MODEL` | e.g. `llama-3.3-70b-versatile` |
 | `GEMINI_API_KEY` | Key from [Google AI Studio](https://aistudio.google.com/apikey) |
 | `GEMINI_MODEL` | e.g. `gemini-2.5-flash` |
+| `HUGGINGFACE_API_KEY` | Token from [Hugging Face](https://huggingface.co/settings/tokens) |
+| `GOOGLE_OAUTH_CLIENT_ID` | Google Sign-In client ID |
 | `MAX_TOOL_ROUNDS` | Agent loop limit (default 8) |
 
 ## Authentication (JWT in cookies)
@@ -70,8 +108,6 @@ Login and register set **httpOnly** cookies (not accessible to JavaScript):
 
 All other `/api/*` routes require a valid `access_token` cookie (or `Authorization: Bearer` header).
 
-Frontend sends `credentials: "include"` on every request so cookies are attached automatically.
-
 ## API endpoints
 
 | Method | Path | Description |
@@ -85,52 +121,15 @@ Frontend sends `credentials: "include"` on every request so cookies are attached
 | GET/PATCH/DELETE | `/api/tools/{id}` | Tool CRUD |
 | POST | `/api/tools/{id}/toggle` | Enable/disable |
 
-## Project structure
+## Naming conventions
 
-```
-backend/
-  manage.py
-  agentic_ai/          # Django settings & URLs
-  api/                 # REST views (auth, chat, tools, agents)
-  core/
-    agent.py           # LLM provider router
-    groq_agent.py      # Groq chat + tools
-    gemini_agent.py    # Gemini chat + tools
-    agents.py          # Agent CRUD
-    tools/             # Tool registry & builtins
-frontend/              # React UI
-```
-
-## User database
-
-Accounts are stored in the **`users`** SQLite table (`core.models.User`). Register and login read/write this table via JWT cookies.
-
-| Field | Purpose |
-|-------|---------|
-| `username` | Login name (unique) |
-| `email` | Optional email |
-| `password` | Hashed (never stored plain text) |
-| `display_name` | Optional display label |
-| `created_at` / `updated_at` | Timestamps |
-
-View users in Django admin: **http://127.0.0.1:8000/admin/** (create a superuser with `python manage.py createsuperuser`).
-
-After adding the `users` table, run `python manage.py migrate` (or `migrate core` first if needed). Existing accounts from the old default `auth_user` table are not migrated — sign up again.
-
-## Tool database
-
-All tools are stored in the **`agent_tools`** SQLite table (`core.models.AgentTool`). Built-in tools are seeded automatically on migrate.
-
-| Field | Purpose |
-|-------|---------|
-| `name` | Function name for the LLM |
-| `description` | When the LLM should call it |
-| `parameters` | JSON Schema |
-| `handler_type` | `builtin`, `http_api`, `echo_args`, `uppercase` |
-| `api_url` | URL with `{param}` placeholders |
-| `api_method` | GET, POST, etc. |
-
-Use the **+ Add** panel in the UI (handler: **External HTTP API**) or `POST /api/tools`.
+| Layer | Convention | Example |
+|-------|------------|---------|
+| Monorepo apps | `kebab-case` | `api-server`, `web-client` |
+| Python packages | `snake_case` | `groq_agent.py` |
+| Django config | `config/` | `config/settings.py` |
+| React components | `PascalCase` | `ChatMessages.tsx` |
+| NPM packages | `@scope/name` | `@agentic-ai/web-client` |
 
 ## Custom API tools
 

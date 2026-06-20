@@ -37,6 +37,41 @@ function isTextFile(file: File): boolean {
   );
 }
 
+function extensionFromMime(mime: string): string {
+  const subtype = mime.split("/")[1]?.toLowerCase() || "bin";
+  if (subtype === "jpeg") return "jpg";
+  if (subtype === "svg+xml") return "svg";
+  return subtype.replace(/[^a-z0-9]+/g, "") || "bin";
+}
+
+function isGenericClipboardName(name: string): boolean {
+  const normalized = name.trim().toLowerCase();
+  return (
+    !normalized ||
+    normalized === "blob" ||
+    normalized.startsWith("blob:") ||
+    /^image\.(png|jpe?g|gif|webp|bmp)$/i.test(normalized)
+  );
+}
+
+function buildAttachmentName(file: File, source: "paste" | "upload"): string {
+  const original = file.name.trim();
+  if (source === "upload" && original && !isGenericClipboardName(original)) {
+    return original;
+  }
+
+  const stamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
+  const ext = extensionFromMime(file.type || "application/octet-stream");
+
+  if (file.type.startsWith("image/")) {
+    return `pasted-image-${stamp}.${ext}`;
+  }
+  if (isTextFile(file) && original && !isGenericClipboardName(original)) {
+    return original;
+  }
+  return `uploaded-file-${stamp}.${ext}`;
+}
+
 export default function Composer({
   loading,
   tools,
@@ -48,6 +83,7 @@ export default function Composer({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [attachmentName, setAttachmentName] = useState<string | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
   useEffect(() => {
@@ -60,9 +96,10 @@ export default function Composer({
     return () => URL.revokeObjectURL(url);
   }, [selectedFile]);
 
-  const attachFile = (file: File | null) => {
+  const attachFile = (file: File | null, source: "paste" | "upload") => {
     if (!file) return;
     setSelectedFile(file);
+    setAttachmentName(buildAttachmentName(file, source));
     setMenuOpen(false);
     inputRef.current?.focus();
   };
@@ -73,29 +110,30 @@ export default function Composer({
     if (loading) return;
 
     if (selectedFile) {
+      const name = attachmentName || buildAttachmentName(selectedFile, "upload");
       if (selectedFile.type.startsWith("image/")) {
         try {
           const dataUrl = await fileToDataUrl(selectedFile);
-          const name = selectedFile.name || "pasted-image.png";
           text = `![${name}](${dataUrl})${text ? `\n\n${text}` : ""}`;
         } catch {
-          text = `[Image: ${selectedFile.name} (Error reading image)]\n\n${text}`;
+          text = `[Image: ${name} (Error reading image)]\n\n${text}`;
         }
       } else if (isTextFile(selectedFile)) {
         try {
           const content = await selectedFile.text();
-          text = `[File: ${selectedFile.name}]\n\`\`\`\n${content}\n\`\`\`\n\n${text}`;
+          text = `[File: ${name}]\n\`\`\`\n${content}\n\`\`\`\n\n${text}`;
         } catch {
-          text = `[File: ${selectedFile.name} (Error reading content)]\n\n${text}`;
+          text = `[File: ${name} (Error reading content)]\n\n${text}`;
         }
       } else {
-        text = `[File: ${selectedFile.name} (${(selectedFile.size / 1024).toFixed(1)} KB)]\n\n${text}`;
+        text = `[File: ${name} (${(selectedFile.size / 1024).toFixed(1)} KB)]\n\n${text}`;
       }
     }
 
     onSend(text);
     if (inputRef.current) inputRef.current.value = "";
     setSelectedFile(null);
+    setAttachmentName(null);
     setMenuOpen(false);
   };
 
@@ -115,7 +153,7 @@ export default function Composer({
         e.preventDefault();
         const file = item.getAsFile();
         if (file) {
-          attachFile(file);
+          attachFile(file, "paste");
         }
         return;
       }
@@ -203,18 +241,18 @@ export default function Composer({
           className="hidden"
           accept="image/*,.txt,.md,.json,.js,.py,.ts,.tsx"
           onChange={(e) => {
-            attachFile(e.target.files?.[0] ?? null);
+            attachFile(e.target.files?.[0] ?? null, "upload");
             e.target.value = "";
           }}
         />
 
         <div className="flex-1 flex flex-col items-start gap-1.5 min-w-0">
-          {selectedFile && (
+          {selectedFile && attachmentName && (
             <div className="flex items-center gap-2 px-3 py-1.5 bg-surface-hover border border-border rounded-xl text-xs font-medium text-text select-none">
               {previewUrl ? (
                 <img
                   src={previewUrl}
-                  alt={selectedFile.name}
+                  alt={attachmentName}
                   className="w-10 h-10 rounded-lg object-cover border border-border shrink-0"
                 />
               ) : (
@@ -222,10 +260,13 @@ export default function Composer({
                   <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
                 </svg>
               )}
-              <span className="truncate max-w-[240px]" title={selectedFile.name}>{selectedFile.name}</span>
+              <span className="truncate max-w-[240px]" title={attachmentName}>{attachmentName}</span>
               <button
                 type="button"
-                onClick={() => setSelectedFile(null)}
+                onClick={() => {
+                  setSelectedFile(null);
+                  setAttachmentName(null);
+                }}
                 className="text-text-secondary hover:text-text cursor-pointer p-0.5 rounded hover:bg-surface-hover/80 border-none bg-transparent"
                 title="Remove file"
               >

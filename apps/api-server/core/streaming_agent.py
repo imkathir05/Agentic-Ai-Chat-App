@@ -178,7 +178,7 @@ def run_groq_agent_stream(
     prompt = (system_prompt or "").strip() or DEFAULT_LLM_PROMPT
     tools = _build_openai_tools(tool_ids)
 
-    openai_messages = _to_openai_messages(messages, prompt)
+    openai_messages = _to_openai_messages(messages, prompt, model_name)
     if len(openai_messages) <= 1:
         raise ValueError("No messages to send")
 
@@ -359,7 +359,7 @@ def run_huggingface_agent_stream(
     prompt = (system_prompt or "").strip() or DEFAULT_LLM_PROMPT
     tools = _build_hf_tools(tool_ids)
 
-    openai_messages = _to_hf_messages(messages, prompt)
+    openai_messages = _to_hf_messages(messages, prompt, model_name)
     if len(openai_messages) <= 1:
         raise ValueError("No messages to send")
 

@@ -1,0 +1,15 @@
+{
+  "name": "agentic-ai-platform",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Enterprise monorepo for the Agentic AI chat platform",
+  "workspaces": [
+    "apps/web-client"
+  ],
+  "scripts": {
+    "dev:api": "cd apps/api-server && ..\\..\\venv\\Scripts\\python manage.py runserver 127.0.0.1:8000",
+    "dev:ws": "cd apps/api-server && ..\\..\\venv\\Scripts\\python websocket_server.py",
+    "dev:web": "npm run dev --workspace @agentic-ai/web-client",
+    "install:web": "npm install --workspace @agentic-ai/web-client"
+  }
+}

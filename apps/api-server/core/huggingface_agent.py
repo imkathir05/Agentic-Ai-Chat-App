@@ -4,60 +4,60 @@ from typing import Any
 import httpx
 from django.conf import settings as django_settings
 
-from core.env_keys import get_groq_api_key
-from core.llm_common import DEFAULT_LLM_PROMPT, build_agent_response, parse_multimodal_content
+from core.env_keys import get_huggingface_api_key
+from core.llm_common import DEFAULT_LLM_PROMPT, build_agent_response, prepare_user_content_for_api
 from core.tools.registry import registry
 
-GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions"
-
-# Groq's Llama models sometimes fail tool_use on the echo tool (invalid generation).
-GROQ_SKIP_TOOLS = frozenset({"echo"})
+HUGGINGFACE_API_URL = "https://router.huggingface.co/v1/chat/completions"
 
 
-def _friendly_groq_error(status: int, body: str) -> str:
+def _friendly_huggingface_error(status: int, body: str) -> str:
     lower = body.lower()
-    if status == 401 or "invalid_api_key" in lower:
+    if status == 401 or "invalid" in lower or "token" in lower:
         return (
-            "Invalid Groq API key. Set GROQ_API_KEY in backend/.env — "
-            "https://console.groq.com/keys"
+            "Invalid Hugging Face API Token. Set HUGGINGFACE_API_KEY or HF_TOKEN in .env — "
+            "https://huggingface.co/settings/tokens"
         )
-    if status == 429 or "rate" in lower:
-        return "Groq rate limit exceeded. Wait a moment and try again."
-    if status == 404 and "model" in lower:
-        return (
-            "Invalid Groq model. Try llama-3.3-70b-versatile or llama-3.1-8b-instant."
-        )
+    if status == 503 or "loading" in lower:
+        try:
+            data = json.loads(body)
+            msg = data.get("error", "Model is currently loading on Hugging Face.")
+            estimated_time = data.get("estimated_time", 20)
+            return f"{msg} (Estimated time: {estimated_time}s). Please wait and try again."
+        except Exception:
+            return "Model is currently loading on Hugging Face. Please try again in a moment."
     try:
         data = json.loads(body)
-        err = data.get("error", {})
+        err = data.get("error")
+        if isinstance(err, str):
+            return err
         if isinstance(err, dict) and err.get("message"):
             return str(err["message"])
     except json.JSONDecodeError:
         pass
-    return body or f"Groq API error ({status})"
+    return body or f"Hugging Face API error ({status})"
 
 
-def _resolve_groq_model(model: str | None) -> str:
-    name = (model or django_settings.GROQ_MODEL or "llama-3.3-70b-versatile").strip()
+def _resolve_huggingface_model(model: str | None) -> str:
+    name = (model or django_settings.HUGGINGFACE_MODEL or "Qwen/Qwen2.5-Coder-32B-Instruct").strip()
     if name:
         return name
-    return "llama-3.3-70b-versatile"
+    return "Qwen/Qwen2.5-Coder-32B-Instruct"
 
 
 def _get_api_key(api_key: str | None = None) -> str:
-    key = get_groq_api_key(api_key)
+    key = get_huggingface_api_key(api_key)
     if not key:
         raise ValueError(
-            "Groq API key is not set. Add GROQ_API_KEY to backend/.env "
-            "(get a key at https://console.groq.com/keys), then restart the backend."
+            "Hugging Face API Token is not set. Add HUGGINGFACE_API_KEY to .env "
+            "(get a token at https://huggingface.co/settings/tokens), then restart the backend."
         )
     return key
 
 
 def _build_openai_tools(tool_ids: list[str] | None = None) -> list[dict[str, Any]] | None:
     declarations = registry.get_function_declarations(tool_ids)
-    filtered = [d for d in declarations if d["name"] not in GROQ_SKIP_TOOLS]
-    if not filtered:
+    if not declarations:
         return None
     return [
         {
@@ -68,13 +68,16 @@ def _build_openai_tools(tool_ids: list[str] | None = None) -> list[dict[str, Any
                 "parameters": d["parameters"],
             },
         }
-        for d in filtered
+        for d in declarations
     ]
 
 
 def _to_openai_messages(
-    messages: list[dict[str, Any]], system_prompt: str
+    messages: list[dict[str, Any]],
+    system_prompt: str,
+    model: str | None = None,
 ) -> list[dict[str, Any]]:
+    model_name = _resolve_huggingface_model(model)
     result: list[dict[str, Any]] = [{"role": "system", "content": system_prompt}]
     for msg in messages:
         role = msg.get("role", "user")
@@ -83,7 +86,7 @@ def _to_openai_messages(
         content = msg.get("content", "")
         if role in ("user", "assistant", "tool") and content is not None:
             parsed_content = (
-                parse_multimodal_content(content)
+                prepare_user_content_for_api(content, provider="huggingface", model=model_name)
                 if role == "user" and isinstance(content, str)
                 else content
             )
@@ -97,7 +100,7 @@ def _to_openai_messages(
     return result
 
 
-def run_groq_agent(
+def run_huggingface_agent(
     messages: list[dict[str, Any]],
     api_key: str | None = None,
     model: str | None = None,
@@ -107,11 +110,11 @@ def run_groq_agent(
     agent_name: str | None = None,
 ) -> dict[str, Any]:
     key = _get_api_key(api_key)
-    model_name = _resolve_groq_model(model)
+    model_name = _resolve_huggingface_model(model)
     prompt = (system_prompt or "").strip() or DEFAULT_LLM_PROMPT
     tools = _build_openai_tools(tool_ids)
 
-    openai_messages = _to_openai_messages(messages, prompt)
+    openai_messages = _to_openai_messages(messages, prompt, model_name)
     if len(openai_messages) <= 1:
         raise ValueError("No messages to send")
 
@@ -133,31 +136,33 @@ def run_groq_agent(
 
         try:
             resp = httpx.post(
-                GROQ_API_URL,
+                HUGGINGFACE_API_URL,
                 headers=headers,
                 json=body,
                 timeout=120.0,
             )
         except httpx.RequestError as e:
-            raise ValueError(f"Could not reach Groq API: {e}") from e
+            raise ValueError(f"Could not reach Hugging Face API: {e}") from e
 
         if resp.status_code >= 400:
             err_text = resp.text
             if "tool_use_failed" in err_text and tools:
                 body_no_tools = {k: v for k, v in body.items() if k not in ("tools", "tool_choice")}
                 resp = httpx.post(
-                    GROQ_API_URL,
+                    HUGGINGFACE_API_URL,
                     headers=headers,
                     json=body_no_tools,
                     timeout=120.0,
                 )
             if resp.status_code >= 400:
-                raise ValueError(_friendly_groq_error(resp.status_code, resp.text))
+                raise ValueError(_friendly_huggingface_error(resp.status_code, resp.text))
 
         data = resp.json()
         choices = data.get("choices") or []
         if not choices:
-            raise ValueError("Groq returned no choices")
+            if "error" in data:
+                raise ValueError(_friendly_huggingface_error(resp.status_code, resp.text))
+            raise ValueError("Hugging Face returned no choices")
 
         assistant_message = choices[0].get("message") or {}
         tool_calls = assistant_message.get("tool_calls") or []
@@ -166,7 +171,7 @@ def run_groq_agent(
             return build_agent_response(
                 message=(assistant_message.get("content") or "").strip(),
                 tool_trace=tool_trace,
-                provider="groq",
+                provider="huggingface",
                 model=model_name,
                 agent_id=agent_id,
                 agent_name=agent_name,
@@ -188,7 +193,7 @@ def run_groq_agent(
             except json.JSONDecodeError:
                 args = {"raw": raw_args}
 
-            call_id = tc.get("id") or f"groq-{round_idx}-{call_idx}-{fn_name}"
+            call_id = tc.get("id") or f"hf-{round_idx}-{call_idx}-{fn_name}"
 
             try:
                 result = registry.execute(fn_name, args)
@@ -218,7 +223,7 @@ def run_groq_agent(
     return build_agent_response(
         message="Reached maximum tool rounds. Please try a simpler request.",
         tool_trace=tool_trace,
-        provider="groq",
+        provider="huggingface",
         model=model_name,
         agent_id=agent_id,
         agent_name=agent_name,

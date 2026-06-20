@@ -2,6 +2,7 @@
 .env
 .env.local
 .env.*
+!.env.example
 
 # Python
 __pycache__/
@@ -9,13 +10,16 @@ __pycache__/
 *$py.class
 venv/
 .venv/
-db.sqlite3
+**/db.sqlite3
 
 # Node
 node_modules/
+apps/web-client/dist/
+apps/web-client/dist-ssr/
 dist/
 dist-ssr/
 *.local
+.vite/
 
 # Editor settings
 .vscode/

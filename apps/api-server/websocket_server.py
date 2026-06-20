@@ -13,7 +13,7 @@ from asgiref.sync import sync_to_async
 from websockets.server import serve
 
 # Configure Django settings module
-os.environ.setdefault("DJANGO_SETTINGS_MODULE", "agentic_ai.settings")
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings")
 django.setup()
 
 from django.conf import settings

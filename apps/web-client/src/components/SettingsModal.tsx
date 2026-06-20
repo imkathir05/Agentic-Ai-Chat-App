@@ -14,6 +14,8 @@ interface Props {
 
 const GROQ_MODELS = [
   "llama-3.3-70b-versatile",
+  "llama-3.2-11b-vision-preview",
+  "llama-3.2-90b-vision-preview",
   "llama-3.1-8b-instant",
   "llama-3.1-70b-versatile",
   "mixtral-8x7b-32768",
@@ -101,7 +103,7 @@ export default function SettingsModal({
             Server API key:{" "}
             <span className={`font-semibold ${serverHasApiKey ? "text-accent" : "text-error"}`}>
               {serverHasApiKey
-                ? `Set in backend/.env (${isGroq ? "GROQ_API_KEY" : isGemini ? "GEMINI_API_KEY" : "HUGGINGFACE_API_KEY"})`
+                ? `Set in .env (${isGroq ? "GROQ_API_KEY" : isGemini ? "GEMINI_API_KEY" : "HUGGINGFACE_API_KEY"})`
                 : "Not set in .env"}
             </span>
           </p>
@@ -112,12 +114,12 @@ export default function SettingsModal({
               type="password"
               placeholder={
                 serverHasApiKey
-                  ? "Leave empty to use backend .env key"
+                  ? "Leave empty to use .env key"
                   : isGroq
-                    ? "gsk_… or set GROQ_API_KEY in backend/.env"
+                    ? "gsk_… or set GROQ_API_KEY in .env"
                     : isGemini
-                      ? "AIza… or set GEMINI_API_KEY in backend/.env"
-                      : "hf_… or set HUGGINGFACE_API_KEY in backend/.env"
+                      ? "AIza… or set GEMINI_API_KEY in .env"
+                      : "hf_… or set HUGGINGFACE_API_KEY in .env"
               }
               className="w-full px-3.5 py-2.5 bg-surface border border-border rounded-xl text-sm font-normal text-text outline-none focus:border-accent focus:ring-1 focus:ring-accent/20 transition-all placeholder-text-secondary mt-1"
               value={apiKey}

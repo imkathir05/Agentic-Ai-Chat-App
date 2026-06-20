@@ -5,6 +5,8 @@ from dotenv import load_dotenv
 
 
 def _reload_dotenv() -> None:
+    repo_root = getattr(django_settings, "REPO_ROOT", django_settings.BASE_DIR)
+    load_dotenv(repo_root / ".env", override=True)
     load_dotenv(django_settings.BASE_DIR / ".env", override=True)
 
 
