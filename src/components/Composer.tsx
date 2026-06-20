@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { Tool } from "../api";
 
 interface Props {
@@ -15,6 +15,28 @@ const QUICK_ACTIONS = [
   { label: "Call an API", icon: "api", prompt: "Use an API tool to fetch post id 1" },
 ];
 
+function fileToDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(file);
+  });
+}
+
+function isTextFile(file: File): boolean {
+  return (
+    file.type.startsWith("text/") ||
+    file.name.endsWith(".txt") ||
+    file.name.endsWith(".md") ||
+    file.name.endsWith(".json") ||
+    file.name.endsWith(".js") ||
+    file.name.endsWith(".py") ||
+    file.name.endsWith(".ts") ||
+    file.name.endsWith(".tsx")
+  );
+}
+
 export default function Composer({
   loading,
   tools,
@@ -26,6 +48,24 @@ export default function Composer({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!selectedFile?.type.startsWith("image/")) {
+      setPreviewUrl(null);
+      return;
+    }
+    const url = URL.createObjectURL(selectedFile);
+    setPreviewUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, [selectedFile]);
+
+  const attachFile = (file: File | null) => {
+    if (!file) return;
+    setSelectedFile(file);
+    setMenuOpen(false);
+    inputRef.current?.focus();
+  };
 
   const submit = async () => {
     let text = inputRef.current?.value.trim() || "";
@@ -33,20 +73,19 @@ export default function Composer({
     if (loading) return;
 
     if (selectedFile) {
-      if (
-        selectedFile.type.startsWith("text/") ||
-        selectedFile.name.endsWith(".txt") ||
-        selectedFile.name.endsWith(".md") ||
-        selectedFile.name.endsWith(".json") ||
-        selectedFile.name.endsWith(".js") ||
-        selectedFile.name.endsWith(".py") ||
-        selectedFile.name.endsWith(".ts") ||
-        selectedFile.name.endsWith(".tsx")
-      ) {
+      if (selectedFile.type.startsWith("image/")) {
+        try {
+          const dataUrl = await fileToDataUrl(selectedFile);
+          const name = selectedFile.name || "pasted-image.png";
+          text = `![${name}](${dataUrl})${text ? `\n\n${text}` : ""}`;
+        } catch {
+          text = `[Image: ${selectedFile.name} (Error reading image)]\n\n${text}`;
+        }
+      } else if (isTextFile(selectedFile)) {
         try {
           const content = await selectedFile.text();
           text = `[File: ${selectedFile.name}]\n\`\`\`\n${content}\n\`\`\`\n\n${text}`;
-        } catch (e) {
+        } catch {
           text = `[File: ${selectedFile.name} (Error reading content)]\n\n${text}`;
         }
       } else {
@@ -64,6 +103,22 @@ export default function Composer({
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       submit();
+    }
+  };
+
+  const handlePaste = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+
+    for (const item of items) {
+      if (item.type.startsWith("image/")) {
+        e.preventDefault();
+        const file = item.getAsFile();
+        if (file) {
+          attachFile(file);
+        }
+        return;
+      }
     }
   };
 
@@ -113,7 +168,7 @@ export default function Composer({
                 </div>
                 <div className="flex flex-col">
                   <strong className="text-xs font-semibold text-text">Upload File</strong>
-                  <span className="text-[10px] text-text-secondary mt-0.5">Attach documents, logs, or code</span>
+                  <span className="text-[10px] text-text-secondary mt-0.5">Attach images, documents, logs, or code</span>
                 </div>
               </button>
 
@@ -146,11 +201,9 @@ export default function Composer({
           type="file"
           ref={fileInputRef}
           className="hidden"
+          accept="image/*,.txt,.md,.json,.js,.py,.ts,.tsx"
           onChange={(e) => {
-            const file = e.target.files?.[0];
-            if (file) {
-              setSelectedFile(file);
-            }
+            attachFile(e.target.files?.[0] ?? null);
             e.target.value = "";
           }}
         />
@@ -158,9 +211,17 @@ export default function Composer({
         <div className="flex-1 flex flex-col items-start gap-1.5 min-w-0">
           {selectedFile && (
             <div className="flex items-center gap-2 px-3 py-1.5 bg-surface-hover border border-border rounded-xl text-xs font-medium text-text select-none">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
-              </svg>
+              {previewUrl ? (
+                <img
+                  src={previewUrl}
+                  alt={selectedFile.name}
+                  className="w-10 h-10 rounded-lg object-cover border border-border shrink-0"
+                />
+              ) : (
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
+                </svg>
+              )}
               <span className="truncate max-w-[240px]" title={selectedFile.name}>{selectedFile.name}</span>
               <button
                 type="button"
@@ -181,6 +242,7 @@ export default function Composer({
             placeholder="Ask anything"
             rows={1}
             onKeyDown={handleKeyDown}
+            onPaste={handlePaste}
             disabled={loading}
           />
         </div>

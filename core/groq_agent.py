@@ -5,7 +5,7 @@ import httpx
 from django.conf import settings as django_settings
 
 from core.env_keys import get_groq_api_key
-from core.llm_common import DEFAULT_LLM_PROMPT, build_agent_response
+from core.llm_common import DEFAULT_LLM_PROMPT, build_agent_response, parse_multimodal_content
 from core.tools.registry import registry
 
 GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions"
@@ -82,7 +82,12 @@ def _to_openai_messages(
             continue
         content = msg.get("content", "")
         if role in ("user", "assistant", "tool") and content is not None:
-            entry: dict[str, Any] = {"role": role, "content": content}
+            parsed_content = (
+                parse_multimodal_content(content)
+                if role == "user" and isinstance(content, str)
+                else content
+            )
+            entry: dict[str, Any] = {"role": role, "content": parsed_content}
             if role == "tool" and msg.get("tool_call_id"):
                 entry["tool_call_id"] = msg["tool_call_id"]
             if role == "assistant" and msg.get("tool_calls"):

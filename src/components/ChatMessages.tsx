@@ -63,11 +63,45 @@ function renderTextWithInlineFormatting(text: string) {
           if (bp.startsWith("**") && bp.endsWith("**")) {
             return <strong key={bidx} className="font-semibold text-text">{bp.slice(2, -2)}</strong>;
           }
-          return bp;
+          return renderTextWithImages(bp, `${index}-${bidx}`);
         })}
       </React.Fragment>
     );
   });
+}
+
+function renderTextWithImages(text: string, keyPrefix: string) {
+  const imageRegex = /!\[([^\]]*)\]\(([^)]+)\)/g;
+  const nodes: React.ReactNode[] = [];
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+
+  while ((match = imageRegex.exec(text)) !== null) {
+    if (match.index > lastIndex) {
+      nodes.push(text.slice(lastIndex, match.index));
+    }
+    const alt = match[1] || "Attached image";
+    const src = match[2];
+    nodes.push(
+      <img
+        key={`${keyPrefix}-img-${match.index}`}
+        src={src}
+        alt={alt}
+        className="my-2 max-w-full max-h-80 rounded-xl border border-border object-contain"
+      />
+    );
+    lastIndex = match.index + match[0].length;
+  }
+
+  if (lastIndex < text.length) {
+    nodes.push(text.slice(lastIndex));
+  }
+
+  if (nodes.length === 0) {
+    return text;
+  }
+
+  return <React.Fragment key={keyPrefix}>{nodes}</React.Fragment>;
 }
 
 function parseMarkdown(text: string) {

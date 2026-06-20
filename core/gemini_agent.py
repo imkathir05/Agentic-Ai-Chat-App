@@ -1,4 +1,6 @@
+import base64
 import json
+import re
 from typing import Any
 
 from django.conf import settings as django_settings
@@ -7,7 +9,7 @@ from google.genai import errors as genai_errors
 from google.genai import types
 
 from core.env_keys import get_gemini_api_key
-from core.llm_common import DEFAULT_LLM_PROMPT, build_agent_response
+from core.llm_common import DEFAULT_LLM_PROMPT, MARKDOWN_IMAGE_RE, build_agent_response
 from core.tools.registry import registry
 
 
@@ -64,6 +66,25 @@ def _get_client(api_key: str | None = None) -> genai.Client:
     return genai.Client(api_key=key)
 
 
+def _content_to_parts(text: str) -> list[types.Part]:
+    parts: list[types.Part] = []
+    image_urls = MARKDOWN_IMAGE_RE.findall(text)
+    plain_text = MARKDOWN_IMAGE_RE.sub("", text).strip()
+
+    if plain_text:
+        parts.append(types.Part.from_text(text=plain_text))
+
+    for url in image_urls:
+        match = re.match(r"data:image/([^;]+);base64,(.+)", url)
+        if not match:
+            continue
+        mime = f"image/{match.group(1)}"
+        data = base64.b64decode(match.group(2))
+        parts.append(types.Part.from_bytes(data=data, mime_type=mime))
+
+    return parts
+
+
 def _messages_to_contents(messages: list[dict[str, Any]]) -> list[types.Content]:
     contents: list[types.Content] = []
     for msg in messages:
@@ -74,10 +95,13 @@ def _messages_to_contents(messages: list[dict[str, Any]]) -> list[types.Content]
         if not text:
             continue
         gemini_role = "user" if role == "user" else "model"
+        parts = _content_to_parts(text) if isinstance(text, str) else [types.Part.from_text(text=str(text))]
+        if not parts:
+            continue
         contents.append(
             types.Content(
                 role=gemini_role,
-                parts=[types.Part.from_text(text=text)],
+                parts=parts,
             )
         )
     return contents
