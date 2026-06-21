@@ -20,7 +20,10 @@ export default function AuthModal({ open, initialMode, onClose, onSuccess, googl
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const [localGoogleClientId, setLocalGoogleClientId] = useState(googleClientId || '');
+  const envGoogleClientId = import.meta.env.VITE_GOOGLE_OAUTH_CLIENT_ID?.trim() || "";
+  const [localGoogleClientId, setLocalGoogleClientId] = useState(
+    googleClientId || envGoogleClientId || ""
+  );
 
   const handleGoogleCallback = async (response: any) => {
     const idToken = response.credential;
@@ -51,8 +54,10 @@ export default function AuthModal({ open, initialMode, onClose, onSuccess, googl
   useEffect(() => {
     if (googleClientId) {
       setLocalGoogleClientId(googleClientId);
+    } else if (envGoogleClientId) {
+      setLocalGoogleClientId(envGoogleClientId);
     }
-  }, [googleClientId]);
+  }, [googleClientId, envGoogleClientId]);
 
   useEffect(() => {
     if (!open) return;
@@ -187,7 +192,7 @@ export default function AuthModal({ open, initialMode, onClose, onSuccess, googl
                 className="flex items-center w-full px-4 py-3 bg-white dark:bg-zinc-800 border border-gray-300 dark:border-zinc-700 rounded-full text-[15px] font-medium cursor-pointer relative justify-center hover:bg-gray-50 dark:hover:bg-zinc-700 transition-colors text-gray-900 dark:text-zinc-100"
                 onClick={() => {
                   if (!localGoogleClientId) {
-                    setError('Google Client ID not loaded yet');
+                    setError('Google Sign-In is not configured. Set VITE_GOOGLE_OAUTH_CLIENT_ID on Vercel or fix the API connection.');
                   }
                 }}
               >

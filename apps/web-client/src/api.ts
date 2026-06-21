@@ -75,6 +75,20 @@ const fetchOpts: RequestInit = {
 const BACKEND_HINT =
   "Backend is not running. Open a terminal and run: cd backend && .\\venv\\Scripts\\activate && python manage.py runserver 127.0.0.1:8000 (or double-click start-backend.bat)";
 
+function backendConnectionError(): Error {
+  if (import.meta.env.DEV) {
+    return new Error(BACKEND_HINT);
+  }
+  if (!PROD_API) {
+    return new Error(
+      "Backend URL is not configured. Set VITE_API_URL on Vercel to your Render API URL (e.g. https://agentic-ai-api.onrender.com)."
+    );
+  }
+  return new Error(
+    `Cannot reach backend at ${PROD_API}. Make sure the Render API service is Live and CORS_ALLOWED_ORIGINS includes your Vercel URL.`
+  );
+}
+
 async function apiFetch(url: string, init?: RequestInit): Promise<Response> {
   const opts = { ...fetchOpts, ...init };
   try {
@@ -88,7 +102,7 @@ async function apiFetch(url: string, init?: RequestInit): Promise<Response> {
         /* fall through */
       }
     }
-    throw new Error(BACKEND_HINT);
+    throw backendConnectionError();
   }
 }
 

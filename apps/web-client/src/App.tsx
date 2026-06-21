@@ -282,7 +282,9 @@ export default function App() {
   const [loginOpen, setLoginOpen] = useState(false);
   const [authMode, setAuthMode] = useState<"login" | "register">("login");
   const [theme, setTheme] = useState<Theme>(() => loadTheme());
-  const [googleClientId, setGoogleClientId] = useState("");
+  const [googleClientId, setGoogleClientId] = useState(
+    () => import.meta.env.VITE_GOOGLE_OAUTH_CLIENT_ID?.trim() || ""
+  );
 
   const activeSocketRef = useRef<WebSocket | null>(null);
 
