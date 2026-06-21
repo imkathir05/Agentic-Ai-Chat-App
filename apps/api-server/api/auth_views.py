@@ -92,12 +92,21 @@ def login(request):
     set_auth_cookies(res, access, refresh)
     return res
 
+def _cookie_delete_kwargs():
+    return {
+        "path": "/",
+        "secure": getattr(settings, "AUTH_COOKIE_SECURE", not settings.DEBUG),
+        "samesite": getattr(settings, "AUTH_COOKIE_SAMESITE", "Lax"),
+    }
+
+
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def logout(request):
     res = Response({'detail': 'Logged out'})
-    res.delete_cookie('access_token')
-    res.delete_cookie('refresh_token')
+    delete_kwargs = _cookie_delete_kwargs()
+    res.delete_cookie('access_token', **delete_kwargs)
+    res.delete_cookie('refresh_token', **delete_kwargs)
     return res
 
 @api_view(['POST'])
