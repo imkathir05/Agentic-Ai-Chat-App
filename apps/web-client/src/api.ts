@@ -60,6 +60,40 @@ export interface HealthResponse {
 const PROD_API = import.meta.env.VITE_API_URL?.trim().replace(/\/$/, "");
 const API_BASE = PROD_API ? `${PROD_API}/api` : "/api";
 const DEV_BACKEND = "http://127.0.0.1:8000";
+const ACCESS_TOKEN_KEY = "agentic_ai_access_token";
+
+type AuthResponse = { user: User; access_token?: string };
+
+function getAccessToken(): string | null {
+  try {
+    return sessionStorage.getItem(ACCESS_TOKEN_KEY);
+  } catch {
+    return null;
+  }
+}
+
+function setAccessToken(token: string): void {
+  try {
+    sessionStorage.setItem(ACCESS_TOKEN_KEY, token);
+  } catch {
+    /* ignore */
+  }
+}
+
+function clearAccessToken(): void {
+  try {
+    sessionStorage.removeItem(ACCESS_TOKEN_KEY);
+  } catch {
+    /* ignore */
+  }
+}
+
+function persistAuthResponse(data: AuthResponse): AuthResponse {
+  if (data.access_token) {
+    setAccessToken(data.access_token);
+  }
+  return data;
+}
 
 export function getChatSocketUrl(): string {
   const wsUrl = import.meta.env.VITE_WS_URL?.trim();
@@ -90,7 +124,12 @@ function backendConnectionError(): Error {
 }
 
 async function apiFetch(url: string, init?: RequestInit): Promise<Response> {
-  const opts = { ...fetchOpts, ...init };
+  const headers = new Headers(init?.headers);
+  const token = getAccessToken();
+  if (token && !headers.has("Authorization")) {
+    headers.set("Authorization", `Bearer ${token}`);
+  }
+  const opts: RequestInit = { ...fetchOpts, ...init, headers };
   try {
     return await fetch(url, opts);
   } catch {
@@ -145,7 +184,7 @@ export async function login(
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ username, password }),
   });
-  return handleResponse(res);
+  return persistAuthResponse(await handleResponse<AuthResponse>(res));
 }
 
 export async function register(
@@ -159,7 +198,7 @@ export async function register(
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ username, email, password }),
   });
-  return handleResponse(res);
+  return persistAuthResponse(await handleResponse<AuthResponse>(res));
 }
 
 export async function googleLogin(token: string): Promise<{ user: User }> {
@@ -169,7 +208,7 @@ export async function googleLogin(token: string): Promise<{ user: User }> {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ token }),
   });
-  return handleResponse(res);
+  return persistAuthResponse(await handleResponse<AuthResponse>(res));
 }
 
 export async function checkEmail(email: string): Promise<{ exists: boolean }> {
@@ -183,6 +222,7 @@ export async function checkEmail(email: string): Promise<{ exists: boolean }> {
 }
 
 export async function logout(): Promise<void> {
+  clearAccessToken();
   const res = await apiFetch(`${API_BASE}/auth/logout`, {
     ...fetchOpts,
     method: "POST",

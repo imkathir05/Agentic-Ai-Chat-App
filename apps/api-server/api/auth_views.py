@@ -64,7 +64,8 @@ def register(request):
             'id': user.id,
             'username': user.username,
             'email': user.email
-        }
+        },
+        'access_token': access,
     })
     set_auth_cookies(res, access, refresh)
     return res
@@ -85,7 +86,8 @@ def login(request):
             'id': user.id,
             'username': user.username,
             'email': user.email
-        }
+        },
+        'access_token': access,
     })
     set_auth_cookies(res, access, refresh)
     return res
@@ -130,7 +132,13 @@ def me(request):
 @permission_classes([IsAuthenticated])
 def ws_token(request):
     """Return JWT for WebSocket auth (httpOnly cookies are not sent through all WS proxies)."""
-    token = request.COOKIES.get('access_token') or request.auth
+    token = request.COOKIES.get('access_token')
+    if not token and request.auth:
+        token = request.auth if isinstance(request.auth, str) else str(request.auth)
+    if not token:
+        auth_header = request.headers.get('Authorization', '')
+        if auth_header.startswith('Bearer '):
+            token = auth_header.split(' ', 1)[1]
     if not token:
         return Response({'detail': 'No access token'}, status=status.HTTP_401_UNAUTHORIZED)
     return Response({'token': token})
@@ -187,7 +195,8 @@ def google_auth(request):
                 'id': user.id,
                 'username': user.username,
                 'email': user.email
-            }
+            },
+            'access_token': access,
         })
         set_auth_cookies(res, access, refresh)
         return res
