@@ -146,6 +146,11 @@ CORS_ALLOWED_ORIGINS = [
     ).split(",")
     if origin.strip()
 ]
+CSRF_TRUSTED_ORIGINS = CORS_ALLOWED_ORIGINS
+
+# Cross-origin SPA (Vercel) + API (Render) needs SameSite=None cookies over HTTPS.
+AUTH_COOKIE_SECURE = not DEBUG
+AUTH_COOKIE_SAMESITE = "None" if AUTH_COOKIE_SECURE else "Lax"
 
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [

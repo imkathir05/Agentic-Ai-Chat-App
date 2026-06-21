@@ -25,15 +25,21 @@ def generate_tokens(user):
     return access_token, refresh_token
 
 def set_auth_cookies(response, access_token, refresh_token):
+    cookie_kwargs = {
+        "httponly": True,
+        "path": "/",
+        "secure": getattr(settings, "AUTH_COOKIE_SECURE", not settings.DEBUG),
+        "samesite": getattr(settings, "AUTH_COOKIE_SAMESITE", "Lax"),
+    }
     response.set_cookie(
         'access_token', access_token,
         max_age=getattr(settings, 'JWT_ACCESS_HOURS', 1) * 3600,
-        httponly=True, samesite='Lax', path='/',
+        **cookie_kwargs,
     )
     response.set_cookie(
         'refresh_token', refresh_token,
         max_age=getattr(settings, 'JWT_REFRESH_DAYS', 7) * 86400,
-        httponly=True, samesite='Lax', path='/',
+        **cookie_kwargs,
     )
 
 @api_view(['POST'])
