@@ -43,12 +43,13 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "22"
           cache: npm
 
       - name: Frontend build
         run: |
           npm ci
+          npm install --no-save @rollup/rollup-linux-x64-gnu lightningcss-linux-x64-gnu @tailwindcss/oxide-linux-x64-gnu
           npm run build --workspace @agentic-ai/web-client
 
   deploy-backend:
