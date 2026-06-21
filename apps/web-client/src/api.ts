@@ -168,10 +168,24 @@ export async function authMe(): Promise<{ user: User }> {
   return handleResponse(res);
 }
 
+export function getStoredAccessToken(): string | null {
+  return getAccessToken();
+}
+
+export function clearStoredAccessToken(): void {
+  clearAccessToken();
+}
+
 export async function getWsToken(): Promise<string> {
   const res = await apiFetch(`${API_BASE}/auth/ws-token`);
   const data = await handleResponse<{ token: string }>(res);
   return data.token;
+}
+
+export async function getWsAuthToken(): Promise<string> {
+  const stored = getAccessToken();
+  if (stored) return stored;
+  return getWsToken();
 }
 
 export async function login(

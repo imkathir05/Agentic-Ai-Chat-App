@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   authMe,
-  getWsToken,
+  clearStoredAccessToken,
+  getWsAuthToken,
   deleteAgent,
   deleteTool,
   fetchAgents,
@@ -307,6 +308,7 @@ export default function App() {
       setUser(u);
       setLoginOpen(false);
     } catch {
+      clearStoredAccessToken();
       setUser(null);
     } finally {
       setAuthLoading(false);
@@ -536,7 +538,7 @@ export default function App() {
       }
 
       try {
-        const wsToken = await getWsToken();
+        const wsToken = await getWsAuthToken();
         const wsUrl = `${getChatSocketUrl()}?token=${encodeURIComponent(wsToken)}`;
         const socket = new WebSocket(wsUrl);
         activeSocketRef.current = socket;
@@ -562,10 +564,9 @@ export default function App() {
 
             if (chunk.type === "error") {
               if (chunk.code === "unauthorized") {
-                setUser(null);
-                setLoginOpen(true);
-                setAuthMode("login");
-                setChatError("Session expired. Please log in again.");
+                setChatError(
+                  "Chat auth failed. On Render, set the same DJANGO_SECRET_KEY on both agentic-ai-api and agentic-ai-websocket."
+                );
               } else {
                 setChatError(chunk.message || "An error occurred.");
               }
@@ -636,10 +637,9 @@ export default function App() {
       } catch (e) {
         const err = e as Error & { status?: number };
         if (err.status === 401 || err.message === "Unauthorized") {
-          setUser(null);
+          setChatError("Session expired. Please log in again.");
           setLoginOpen(true);
           setAuthMode("login");
-          setChatError("Session expired. Please log in again.");
         } else {
           setChatError(e instanceof Error ? e.message : String(e));
         }
