@@ -1,0 +1,54 @@
+# Render Blueprint — import this when creating services on render.com
+# Set secret env vars in the Render dashboard (or link from GitHub deploy).
+
+services:
+  - type: web
+    name: agentic-ai-api
+    runtime: python
+    rootDir: apps/api-server
+    plan: free
+    buildCommand: pip install -r requirements.txt && python manage.py migrate --noinput
+    startCommand: gunicorn config.wsgi:application --bind 0.0.0.0:$PORT
+    healthCheckPath: /api/health
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.12.0"
+      - key: DJANGO_SECRET_KEY
+        sync: false
+      - key: DEBUG
+        value: "false"
+      - key: DB_ENGINE
+        value: sqlite
+      - key: LLM_PROVIDER
+        value: groq
+      - key: GROQ_API_KEY
+        sync: false
+      - key: HUGGINGFACE_API_KEY
+        sync: false
+      - key: GOOGLE_OAUTH_CLIENT_ID
+        sync: false
+      - key: GOOGLE_OAUTH_CLIENT_SECRET
+        sync: false
+      - key: ALLOWED_HOSTS
+        sync: false
+
+  - type: web
+    name: agentic-ai-websocket
+    runtime: python
+    rootDir: apps/api-server
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: python websocket_server.py
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.12.0"
+      - key: WEBSOCKET_HOST
+        value: 0.0.0.0
+      - key: DJANGO_SECRET_KEY
+        sync: false
+      - key: DB_ENGINE
+        value: sqlite
+      - key: GROQ_API_KEY
+        sync: false
+      - key: HUGGINGFACE_API_KEY
+        sync: false

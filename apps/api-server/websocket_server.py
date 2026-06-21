@@ -174,8 +174,8 @@ async def handler(websocket, path=None):
 
 
 async def main():
-    port = int(os.getenv("WEBSOCKET_PORT", "8001"))
-    host = os.getenv("WEBSOCKET_HOST", "127.0.0.1")
+    port = int(os.getenv("WEBSOCKET_PORT") or os.getenv("PORT", "8001"))
+    host = os.getenv("WEBSOCKET_HOST", "0.0.0.0" if os.getenv("PORT") else "127.0.0.1")
     logger.info(f"Starting WebSocket server on ws://{host}:{port}")
     async with serve(handler, host, port):
         await asyncio.Future()  # keep running

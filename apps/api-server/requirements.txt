@@ -7,3 +7,5 @@ google-genai
 PyJWT
 websockets
 PyMySQL
+psycopg2-binary
+gunicorn
