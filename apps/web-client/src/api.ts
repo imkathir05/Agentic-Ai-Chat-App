@@ -57,10 +57,13 @@ export interface HealthResponse {
   google_client_id?: string;
 }
 
-const API_BASE = "/api";
+const PROD_API = import.meta.env.VITE_API_URL?.trim().replace(/\/$/, "");
+const API_BASE = PROD_API ? `${PROD_API}/api` : "/api";
 const DEV_BACKEND = "http://127.0.0.1:8000";
 
 export function getChatSocketUrl(): string {
+  const wsUrl = import.meta.env.VITE_WS_URL?.trim();
+  if (wsUrl) return wsUrl.replace(/\/$/, "");
   const proto = window.location.protocol === "https:" ? "wss:" : "ws:";
   return `${proto}//${window.location.host}/ws`;
 }
