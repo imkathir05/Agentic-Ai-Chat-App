@@ -138,8 +138,15 @@ AUTH_USER_MODEL = "core.User"
 
 # CORS — credentials required for httpOnly JWT cookies
 CORS_ALLOW_CREDENTIALS = True
+
+
+def _normalize_origin(origin: str) -> str:
+    """Strip whitespace and trailing slashes (django-cors-headers rejects paths)."""
+    return origin.strip().rstrip("/")
+
+
 CORS_ALLOWED_ORIGINS = [
-    origin.strip()
+    _normalize_origin(origin)
     for origin in os.getenv(
         "CORS_ALLOWED_ORIGINS",
         "http://localhost:5173,http://localhost:5174,http://127.0.0.1:5173,http://127.0.0.1:5174",
