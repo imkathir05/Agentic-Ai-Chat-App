@@ -81,7 +81,7 @@ function backendConnectionError(): Error {
   }
   if (!PROD_API) {
     return new Error(
-      "Backend URL is not configured. Set VITE_API_URL on Vercel to your Render API URL (e.g. https://agentic-ai-api.onrender.com)."
+      "Backend URL is not configured. Set VITE_API_URL on Vercel to your Render API URL (copy from Render → agentic-ai-api → top of page)."
     );
   }
   return new Error(
