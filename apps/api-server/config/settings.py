@@ -153,6 +153,14 @@ CORS_ALLOWED_ORIGINS = [
     ).split(",")
     if origin.strip()
 ]
+CORS_ALLOWED_ORIGIN_REGEXES = [
+    pattern.strip()
+    for pattern in os.getenv(
+        "CORS_ALLOWED_ORIGIN_REGEXES",
+        r"^https://[\w-]+\.vercel\.app$" if not DEBUG else "",
+    ).split(",")
+    if pattern.strip()
+]
 CSRF_TRUSTED_ORIGINS = CORS_ALLOWED_ORIGINS
 
 # Cross-origin SPA (Vercel) + API (Render) needs SameSite=None cookies over HTTPS.
