@@ -539,7 +539,7 @@ export default function App() {
 
       try {
         const wsToken = await getWsAuthToken();
-        const wsUrl = `${getChatSocketUrl()}?token=${encodeURIComponent(wsToken)}`;
+        const wsUrl = getChatSocketUrl();
         const socket = new WebSocket(wsUrl);
         activeSocketRef.current = socket;
 
@@ -547,6 +547,7 @@ export default function App() {
         let currentToolTrace: any[] = [];
 
         socket.onopen = () => {
+          socket.send(JSON.stringify({ type: "auth", token: wsToken }));
           const payload = {
             type: "chat",
             messages: nextMessages.map((m) => ({ role: m.role, content: m.content })),
@@ -565,7 +566,7 @@ export default function App() {
             if (chunk.type === "error") {
               if (chunk.code === "unauthorized") {
                 setChatError(
-                  "Chat auth failed. On Render, set the same DJANGO_SECRET_KEY on both agentic-ai-api and agentic-ai-websocket."
+                  "Chat auth failed. Check Render: same DJANGO_SECRET_KEY on API + WebSocket, DB_* vars on WebSocket, then redeploy both."
                 );
               } else {
                 setChatError(chunk.message || "An error occurred.");
